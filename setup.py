@@ -4,6 +4,7 @@ setuptools.setup(
     name="repo2shellscript",
     # https://github.com/jupyter/repo2docker/pull/848
     install_requires=[
+        "dockerfile-parse",
         "jupyter-repo2docker @ "
         "git+https://github.com/manics/repo2docker.git@abstractengine",
     ],
