@@ -4,6 +4,7 @@ import json
 import os
 import shlex
 from shutil import copytree
+from string import Template
 import tarfile
 from traitlets import Unicode
 from uuid import uuid4
@@ -14,16 +15,117 @@ from repo2docker.engine import (
 )
 
 
-# class ShellScriptError(Exception):
-#     def __init__(self, error, output=None):
-#         self.e = error
-#         self.output = output
+def _expand_env(s, *args):
+    # repo2docker uses PATH when expanding PATH
+    env = {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+    for e in reversed(args):
+        env.update(e)
+    return Template(s).substitute(env)
 
-#     def __str__(self):
-#         s = "ShellScriptError\n  {}".format(self.e)
-#         if self.output is not None:
-#             s += "\n  {}".format("".join(self.output))
-#         return s
+
+def _sudo_user(user, bash, env):
+    if user == "root":
+        return bash
+    envkeys = ",".join(env.keys())
+    quoted = shlex.quote(bash)
+    sudo = f"sudo -u {user} --preserve-env={envkeys} bash -c {quoted}"
+    return sudo
+
+
+# https://github.com/docker-library/buildpack-deps/tree/f84f6184d79f2cb7ab94c365ac4f47915e7ca2a8/ubuntu/bionic
+# With the addition of
+# - sudo since it makes it easier to switch USER
+BUILDPACK_BIONIC = """\
+apt-get -qq update
+
+# buildpack-deps:bionic-curl
+# buildpack-deps:bionic-scm
+# buildpack-deps:bionic
+# + sudo
+
+apt-get -qq install --yes --no-install-recommends \
+    ca-certificates \
+    curl \
+    netbase \
+    wget \
+    \
+    gnupg \
+    dirmngr \
+    \
+    bzr \
+    git \
+    mercurial \
+    openssh-client \
+    subversion \
+    procps \
+    \
+    autoconf \
+    automake \
+    bzip2 \
+    dpkg-dev \
+    file \
+    g++ \
+    gcc \
+    imagemagick \
+    libbz2-dev \
+    libc6-dev \
+    libcurl4-openssl-dev \
+    libdb-dev \
+    libevent-dev \
+    libffi-dev \
+    libgdbm-dev \
+    libglib2.0-dev \
+    libgmp-dev \
+    libjpeg-dev \
+    libkrb5-dev \
+    liblzma-dev \
+    libmagickcore-dev \
+    libmagickwand-dev \
+    libmaxminddb-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    libpng-dev \
+    libpq-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libtool \
+    libwebp-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libyaml-dev \
+    make \
+    patch \
+    unzip \
+    xz-utils \
+    zlib1g-dev \
+    \
+    sudo
+
+if apt-cache show 'default-libmysqlclient-dev' 2>/dev/null | grep -q '^Version:'; then
+    echo 'default-libmysqlclient-dev'
+else
+    echo 'libmysqlclient-dev'
+fi
+rm -rf /var/lib/apt/lists/*
+"""
+
+
+def _docker_copy(copy):
+    # Since this is run inside the environment we need to ensure path is absolute.
+    # Also need to deal with copying the contents of directories to match Docker.
+    paths = shlex.split(copy)
+    # Don't quote dest because it may contain envvars
+    dest = paths[-1]
+    statement = ""
+    for n in range(len(paths) - 1):
+        # Strip / because source paths should never be absolute,
+        # and we'll check if a path is a file or dir during the copy
+        p = os.path.join(
+            '"${_REPO2SHELLSCRIPT_SRCDIR}"', shlex.quote(paths[n].strip("/"))
+        )
+        statement += f"if [ -d {p} ]; then cp -a {p}/* {dest}; else cp {p} {dest}; fi\n"
+    return statement
 
 
 def dockerfile_to_bash(dockerfile, buildargs):
@@ -34,14 +136,19 @@ def dockerfile_to_bash(dockerfile, buildargs):
     buildargs: Dict of build arguments
     return: Dictionary with fields:
         'bash': array of bash statements
-        'start': start command
         'env': dict of runtime environment variables
+        'start': start command
+        'user': user to run start command
     """
     bash = []
     cmd = ""
     entrypoint = ""
-    env = {}
+    # Runtime environment
+    runtimeenv = {}
+    # Build and runtime environment
+    currentenv = {}
     parser = DockerfileParser(dockerfile)
+    user = "root"
 
     for d in parser.structure:
         statement = ""
@@ -51,38 +158,46 @@ def dockerfile_to_bash(dockerfile, buildargs):
                 statement += f"{line}\n"
             else:
                 statement += f"# {line}\n"
-        if instruction in ("EXPOSE", "FROM", "COMMENT", "LABEL"):
+        if instruction in ("EXPOSE", "COMMENT", "LABEL"):
             pass
+        elif instruction == "FROM":
+            if d["value"] != "buildpack-deps:bionic":
+                raise NotImplementedError(f"Base image {d['value']} no supported")
+            statement += BUILDPACK_BIONIC
         elif instruction == "ARG":
+            argname = d["value"].split("=", 1)[0]
             try:
                 argvalue = shlex.quote(buildargs[d["value"]])
             except KeyError:
                 if "=" in d["value"]:
-                    argvalue = d["value"]
+                    argvalue = d["value"].split("=", 1)[1]
                 else:
                     raise
-            statement += f"export {d['value']}={argvalue}\n"
+            # Expand because this may eventually end up as a runtime env
+            argvalue = _expand_env(argvalue, currentenv)
+            currentenv[argname] = argvalue
+            statement += f"export {argname}={argvalue}\n"
         elif instruction == "CMD":
             cmd = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "COPY":
-            copy = [shlex.quote(p) for p in shlex.split(d["value"])]
-            statement += f"cp {copy}\n"
+            statement += _docker_copy(d["value"])
         elif instruction == "ENTRYPOINT":
             entrypoint = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "ENV":
-            statement += f"export {d['value']}\n"
             # repodocker is inconsistent in how it uses ENV
             try:
                 k, v = d["value"].split("=", 1)
             except ValueError:
                 k, v = d["value"].split(" ", 1)
-            env[k] = v
+            argvalue = _expand_env(v, currentenv)
+            currentenv[k] = argvalue
+            statement += f"export {k}={argvalue}\n"
+            runtimeenv[k] = argvalue
         elif instruction == "RUN":
-            statement += f"{d['value']}\n"
+            run = _sudo_user(user, d["value"], currentenv)
+            statement += f"{run}\n"
         elif instruction == "USER":
-            # assert False, d
-            print(f"TODO: {d}")
-            bash.append(f"TODO: {d}")
+            user = d["value"]
         elif instruction == "WORKDIR":
             statement += f"cd {d['value']}\n"
         else:
@@ -97,15 +212,17 @@ def dockerfile_to_bash(dockerfile, buildargs):
 
     r = {
         "bash": bash,
+        "env": runtimeenv,
         "start": f"{entrypoint} {cmd}",
-        "env": env,
+        # Expand ${NB_USER}
+        "user": _expand_env(user, currentenv),
     }
     return r
 
 
 class ShellScriptEngine(ContainerEngine):
     """
-    Podman container engine
+    ShellScript container engine
     """
 
     def __init__(self, *, parent):
@@ -163,19 +280,40 @@ class ShellScriptEngine(ContainerEngine):
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
 
         with open(build_file, "w") as f:
-            f.write("#!/usr/bin/env bash\nset -eux\n\n")
+            # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
+            # in the script
+            f.write(
+                f"""\
+#!/usr/bin/env bash
+set -eux
+_REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${{BASH_SOURCE[0]}}" )" && pwd)
+
+"""
+            )
             f.write("\n".join(r["bash"]))
             f.write("\n")
+        os.chmod(build_file, 0o755)
 
         with open(start_file, "w") as f:
-            f.write("#!/usr/bin/env bash\nset -eux\n\n")
+            f.write(
+                f"""\
+#!/usr/bin/env bash
+set -eux
+if [ $(id -un) != {r['user']} ]; then
+    echo ERROR: Must be run as user {r['user']}
+    exit 1
+fi
+"""
+            )
             for k, v in r["env"].items():
                 f.write(f"export {k}={v}\n")
             f.write(f"exec {r['start']}\n")
+        os.chmod(start_file, 0o755)
 
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
         yield f"Start script: {build_file}\n"
+        yield f"User: {r['user']}\n"
 
     def images(self):
         if not os.path.isdir(self.output_directory):
