@@ -4,97 +4,25 @@ cache: pip
 python:
   - 3.6
 
-before_install:
-  # Install podman
-  - ./ci/podman_ubuntu.sh
-
 install:
-  # Make a wheel and install it to test to catch possible
-  # issues with releases
-  - pip install --upgrade setuptools pip
+  - pip install --upgrade pip
   - pip install -r dev-requirements.txt
-  - python setup.py bdist_wheel
-  - pip install dist/*.whl
-  - pip freeze
-  - git clone --depth 1 --single-branch https://github.com/jupyter/repo2docker tests-repo2docker
-  - |
-    for d in ./tests-repo2docker/tests/*/; do
-      if [ "${d##*tests/}" != "unit/" ]; then
-        cp -a $d tests
-      fi
-    done
-
-script:
-  - |
-    # run autoformat
-    if [[ "$REPO_TYPE" == "lint" ]]; then
-      pre-commit run --all-files
-    fi
-  - |
-    # run any of the other tests
-    if [[ "$REPO_TYPE" != "lint" ]]; then
-      # cd into tests so CWD being repo2docker does not hide
-      # possible issues with MANIFEST.in
-      pushd tests;
-      if [ ${REPO_TYPE} == "r" ] || [ ${REPO_TYPE} == "stencila-r" ] || [ ${REPO_TYPE} == "stencila-py" ]; then
-        travis_wait 30 pytest --durations 10 -v ${REPO_TYPE} || exit 1;
-      else
-        pytest -s --durations 10 -v ${REPO_TYPE} || exit 1;
-      fi;
-      popd;
-    fi
-
-after_failure:
-  - |
-    # point to auto-lint-fix
-    if [[ "$REPO_TYPE" == "lint" ]]; then
-      echo "You can install pre-commit hooks to automatically run formatting"
-      echo "on each commit with:"
-      echo "    pre-commit install"
-      echo "or you can run by hand on staged files with"
-      echo "    pre-commit run"
-      echo "or after-the-fact on already committed files with"
-      echo "    pre-commit run --all-files"
-    fi
-
-matrix:
-  include:
-    - env:
-        - REPO_TYPE=lint
-    - env:
-        - REPO_TYPE=unit
-
-    - env:
-        - REPO_TYPE=base
-    - env:
-        - REPO_TYPE=conda
-    - env:
-        - REPO_TYPE=pipfile
-    - env:
-        - REPO_TYPE=venv
-    - env:
-        - REPO_TYPE=stencila-r
-    - env:
-        - REPO_TYPE=stencila-py
-    - env:
-        - REPO_TYPE=julia
-    - env:
-        - REPO_TYPE=r
-    - env:
-        - REPO_TYPE=nix
-    - env:
-        - REPO_TYPE=dockerfile
-    # - env:
-    #     - REPO_TYPE=external
+  - pip install .
 
 jobs:
   include:
-    - stage: deploy
-      if: tag IS present
-      deploy:
-        - provider: pypi
-          user: __token__
-          # password: $PYPI_PASSWORD
-          distributions: sdist bdist_wheel
-          on:
-            tags: true
+    - stage: lint
+      script:
+        - pre-commit run --all-files
+    - stage: test
+      script: ./travis-test.sh
+
+    # - stage: deploy
+    #   if: tag IS present
+    #   deploy:
+    #     - provider: pypi
+    #       user: __token__
+    #       # password: $PYPI_PASSWORD
+    #       distributions: sdist bdist_wheel
+    #       on:
+    #         tags: true
