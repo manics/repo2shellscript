@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 repo2shellscript/_version.py*
 tests/*/
+
+repo2shellscript-output/*

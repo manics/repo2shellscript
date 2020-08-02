@@ -31,7 +31,8 @@ Example:
     Using CondaBuildPack builder
     Output directory: /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653
     Build script: /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653/repo2shellscript-build.bash
-    Start script: /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653/repo2shellscript-build.bash
+    Start script: /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653/repo2shellscript-start.bash
+    Systemd service: /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653/repo2shellscript.service
     User: test
 
 - Output directory: should contain everything required to build the environment, e.g. you could copy this to a Ubuntu 18.04 virtual machine
@@ -39,7 +40,9 @@ Example:
 - Start script: a bash script that should be used to start the environment
 - User: The user that should be used to run the start script
 
-Example of using the output (inside a plain `ubuntu:18.04` Docker container 🙂):
+### Example of using the output
+
+This uses a plain `ubuntu:18.04` Docker container as the base environment 🙂:
 
     docker run -it --name repo2shellscript -p 8888:8888 \
         -v /home/test/repo2shellscript-output/r2dhttps-3a-2f-2fgithub-2ecom-2fbinder-2dexamples-2fconda5778653:/src:ro \
@@ -47,3 +50,33 @@ Example of using the output (inside a plain `ubuntu:18.04` Docker container 🙂
     cd /src
     ./repo2shellscript-build.bash
     sudo -u <USER> ./repo2shellscript-start.bash
+
+
+### Systemd service:
+
+If you use a Ubuntu:18.04 virtual machine your can use Systemd to start jupyter notebook:
+
+    cp repo2shellscript.service /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl start repo2shellscript
+
+Connect to http://IP:8888.
+You will need to enter the auto-generated token which can be obtained from the logs
+
+    journalctl -u repo2shellscript
+
+Alternatively set a fixed token in the configuration file.
+
+
+### Configuration file
+
+For convenience you may wish to set a fixed token instead of checking the startup logs for the generated token.
+Create a repo2docker configuration file, such as `repo2docker_config.py` with
+
+```py
+c.ShellScriptEngine.jupyter_token = 'secret123'
+```
+
+and run
+
+    repo2docker --config repo2docker_config.py ...

@@ -136,6 +136,7 @@ def dockerfile_to_bash(dockerfile, buildargs):
     buildargs: Dict of build arguments
     return: Dictionary with fields:
         'bash': array of bash statements
+        'dir': working directory, "" if not set
         'env': dict of runtime environment variables
         'start': start command
         'user': user to run start command
@@ -143,6 +144,8 @@ def dockerfile_to_bash(dockerfile, buildargs):
     bash = []
     cmd = ""
     entrypoint = ""
+    # Needed so we know which directory to run the start command from
+    currentdir = ""
     # Runtime environment
     runtimeenv = {}
     # Build and runtime environment
@@ -200,6 +203,7 @@ def dockerfile_to_bash(dockerfile, buildargs):
             user = d["value"]
         elif instruction == "WORKDIR":
             statement += f"cd {d['value']}\n"
+            currentdir = _expand_env(d["value"], currentenv)
         else:
             raise NotImplementedError(
                 f"Unexpected Dockerfile instruction: {instruction} {d}"
@@ -212,6 +216,7 @@ def dockerfile_to_bash(dockerfile, buildargs):
 
     r = {
         "bash": bash,
+        "dir": currentdir,
         "env": runtimeenv,
         "start": f"{entrypoint} {cmd}",
         # Expand ${NB_USER}
@@ -227,6 +232,15 @@ class ShellScriptEngine(ContainerEngine):
 
     def __init__(self, *, parent):
         super().__init__(parent=parent)
+
+    jupyter_token = Unicode(
+        None,
+        config=True,
+        allow_none=True,
+        help="""
+        Override the token used when Jupyter starts.
+        """,
+    )
 
     output_directory = Unicode(
         os.path.join(os.getcwd(), "repo2shellscript-output"),
@@ -278,6 +292,7 @@ class ShellScriptEngine(ContainerEngine):
         r = dockerfile_to_bash(dockerfile, buildargs)
         build_file = os.path.join(builddir, "repo2shellscript-build.bash")
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
+        systemd_file = os.path.join(builddir, "repo2shellscript.service")
 
         with open(build_file, "w") as f:
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
@@ -307,12 +322,47 @@ fi
             )
             for k, v in r["env"].items():
                 f.write(f"export {k}={v}\n")
+            if self.jupyter_token is not None:
+                f.write(f"export JUPYTER_TOKEN={self.jupyter_token}\n")
+            if r["dir"]:
+                f.write(f"cd {r['dir']}\n")
             f.write(f"exec {r['start']}\n")
         os.chmod(start_file, 0o755)
+
+        systemd_environment = (
+            "\n".join(
+                "Environment='{}={}'".format(k, v.replace("'", r"\'"))
+                for k, v in r["env"].items()
+            )
+            + "\n"
+        )
+        if self.jupyter_token is not None:
+            systemd_environment += f"Environment='JUPYTER_TOKEN={self.jupyter_token}'\n"
+        # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#WorkingDirectory=
+        work_dir = r["dir"] or "~"
+        with open(systemd_file, "w") as f:
+            f.write(
+                f"""\
+[Unit]
+Description=repo2shellscript
+
+[Service]
+User={r['user']}
+Restart=always
+RestartSec=10
+{systemd_environment}
+ExecStart={r['start']}
+WorkingDirectory={work_dir}
+
+[Install]
+WantedBy=multi-user.target
+"""
+            )
 
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
         yield f"Start script: {start_file}\n"
+        yield f"Systemd service: {systemd_file}\n"
         yield f"User: {r['user']}\n"
 
     def images(self):
