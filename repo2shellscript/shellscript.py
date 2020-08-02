@@ -312,7 +312,7 @@ fi
 
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
-        yield f"Start script: {build_file}\n"
+        yield f"Start script: {start_file}\n"
         yield f"User: {r['user']}\n"
 
     def images(self):
