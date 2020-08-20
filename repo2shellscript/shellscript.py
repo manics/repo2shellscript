@@ -274,11 +274,12 @@ class ShellScriptEngine(ContainerEngine):
         # TODO: Delete existing directory
 
         if kwargs:
-            raise ValueError("Additional kwargs not supported")
+            raise NotImplementedError("Additional kwargs not supported")
+        # TODO: custom_context?
 
         builddir = os.path.join(self.output_directory, tag)
-        os.makedirs(builddir)
         if fileobj:
+            os.makedirs(builddir)
             tarf = tarfile.open(fileobj=fileobj)
             tarf.extractall(builddir)
         else:
