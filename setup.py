@@ -27,6 +27,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
     ],
     packages=setuptools.find_packages(),
+    package_data={"repo2shellscript": ["share/repo2shellscript.pkr.hcl"]},
     include_package_data=True,
     entry_points={
         "repo2docker.engines": [
