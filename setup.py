@@ -30,8 +30,6 @@ setuptools.setup(
     package_data={"repo2shellscript": ["share/repo2shellscript.pkr.hcl"]},
     include_package_data=True,
     entry_points={
-        "repo2docker.engines": [
-            "shellscript = repo2shellscript.shellscript:ShellScriptEngine"
-        ]
+        "repo2docker.engines": ["shellscript = repo2shellscript:ShellScriptEngine"]
     },
 )
