@@ -9,6 +9,14 @@ import tarfile
 from traitlets import Unicode
 from uuid import uuid4
 
+# https://stackoverflow.com/a/20885799
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    # Try backported to PY<37 `importlib_resources`.
+    import importlib_resources as pkg_resources
+from . import resources
+
 from repo2docker.engine import (
     ContainerEngine,
     Image,
@@ -30,85 +38,6 @@ def _sudo_user(user, bash, env):
     quoted = shlex.quote(bash)
     sudo = f"sudo -u {user} --preserve-env={envkeys} bash -c {quoted}"
     return sudo
-
-
-# https://github.com/docker-library/buildpack-deps/tree/f84f6184d79f2cb7ab94c365ac4f47915e7ca2a8/ubuntu/bionic
-# With the addition of
-# - sudo since it makes it easier to switch USER
-BUILDPACK_BIONIC = """\
-apt-get -qq update
-
-# buildpack-deps:bionic-curl
-# buildpack-deps:bionic-scm
-# buildpack-deps:bionic
-# + sudo
-
-apt-get -qq install --yes --no-install-recommends \
-    ca-certificates \
-    curl \
-    netbase \
-    wget \
-    \
-    gnupg \
-    dirmngr \
-    \
-    bzr \
-    git \
-    mercurial \
-    openssh-client \
-    subversion \
-    procps \
-    \
-    autoconf \
-    automake \
-    bzip2 \
-    dpkg-dev \
-    file \
-    g++ \
-    gcc \
-    imagemagick \
-    libbz2-dev \
-    libc6-dev \
-    libcurl4-openssl-dev \
-    libdb-dev \
-    libevent-dev \
-    libffi-dev \
-    libgdbm-dev \
-    libglib2.0-dev \
-    libgmp-dev \
-    libjpeg-dev \
-    libkrb5-dev \
-    liblzma-dev \
-    libmagickcore-dev \
-    libmagickwand-dev \
-    libmaxminddb-dev \
-    libncurses5-dev \
-    libncursesw5-dev \
-    libpng-dev \
-    libpq-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    libssl-dev \
-    libtool \
-    libwebp-dev \
-    libxml2-dev \
-    libxslt-dev \
-    libyaml-dev \
-    make \
-    patch \
-    unzip \
-    xz-utils \
-    zlib1g-dev \
-    \
-    sudo
-
-if apt-cache show 'default-libmysqlclient-dev' 2>/dev/null | grep -q '^Version:'; then
-    echo 'default-libmysqlclient-dev'
-else
-    echo 'libmysqlclient-dev'
-fi
-rm -rf /var/lib/apt/lists/*
-"""
 
 
 def _docker_copy(copy):
@@ -164,9 +93,11 @@ def dockerfile_to_bash(dockerfile, buildargs):
         if instruction in ("EXPOSE", "COMMENT", "LABEL"):
             pass
         elif instruction == "FROM":
-            if d["value"] != "buildpack-deps:bionic":
-                raise NotImplementedError(f"Base image {d['value']} no supported")
-            statement += BUILDPACK_BIONIC
+            try:
+                base_setup = pkg_resources.read_text(resources, f"{d['value']}.sh")
+            except FileNotFoundError:
+                raise NotImplementedError(f"Base image {d['value']} not supported")
+            statement += base_setup
         elif instruction == "ARG":
             argname = d["value"].split("=", 1)[0]
             try:
@@ -294,6 +225,7 @@ class ShellScriptEngine(ContainerEngine):
         build_file = os.path.join(builddir, "repo2shellscript-build.bash")
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
         systemd_file = os.path.join(builddir, "repo2shellscript.service")
+        packer_file = os.path.join(builddir, "repo2shellscript.pkr.hcl")
 
         with open(build_file, "w") as f:
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
@@ -360,10 +292,15 @@ WantedBy=multi-user.target
 """
             )
 
+        packer = pkg_resources.read_text(resources, "repo2shellscript.pkr.hcl")
+        with open(packer_file, "w") as f:
+            f.write(packer)
+
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
         yield f"Start script: {start_file}\n"
         yield f"Systemd service: {systemd_file}\n"
+        yield f"Packer template: {packer_file}\n"
         yield f"User: {r['user']}\n"
 
     def images(self):
