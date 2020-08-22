@@ -1,8 +1,6 @@
 dist: bionic
 language: python
 cache: pip
-python:
-  - 3.6
 
 install:
   - pip install --upgrade pip
@@ -11,10 +9,16 @@ install:
 
 jobs:
   include:
-    - stage: lint
+    - stage: test
       script:
         - pre-commit run --all-files
     - stage: test
+      python:
+        - 3.6
+      script: ./travis-test.sh
+    - stage: test
+      python:
+        - 3.8
       script: ./travis-test.sh
 
     # - stage: deploy

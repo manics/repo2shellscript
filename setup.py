@@ -7,6 +7,7 @@ setuptools.setup(
         "dockerfile-parse",
         "jupyter-repo2docker @ "
         "git+https://github.com/manics/repo2docker.git@abstractengine",
+        "importlib_resources;python_version<'3.7'",
     ],
     python_requires=">=3.5",
     author="Simon Li",
