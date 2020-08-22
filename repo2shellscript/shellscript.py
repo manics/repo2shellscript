@@ -170,6 +170,9 @@ class ShellScriptEngine(ContainerEngine):
         allow_none=True,
         help="""
         Override the token used when Jupyter starts.
+
+        Set to the empty string to disable.
+        Default is a randomly generated string that is included in the output scripts.
         """,
     )
 
@@ -203,6 +206,11 @@ class ShellScriptEngine(ContainerEngine):
         if not tag:
             tag = str(uuid4())
         # TODO: Delete existing directory
+
+        if self.jupyter_token is not None:
+            jupyter_token = self.jupyter_token
+        else:
+            jupyter_token = str(uuid4())
 
         if kwargs:
             raise NotImplementedError("Additional kwargs not supported")
@@ -255,8 +263,7 @@ fi
             )
             for k, v in r["env"].items():
                 f.write(f"export {k}={v}\n")
-            if self.jupyter_token is not None:
-                f.write(f"export JUPYTER_TOKEN={self.jupyter_token}\n")
+            f.write(f"export JUPYTER_TOKEN={jupyter_token}\n")
             if r["dir"]:
                 f.write(f"cd {r['dir']}\n")
             f.write(f"exec {r['start']}\n")
@@ -269,8 +276,7 @@ fi
             )
             + "\n"
         )
-        if self.jupyter_token is not None:
-            systemd_environment += f"Environment='JUPYTER_TOKEN={self.jupyter_token}'\n"
+        systemd_environment += f"Environment='JUPYTER_TOKEN={jupyter_token}'\n"
         # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#WorkingDirectory=
         work_dir = r["dir"] or "~"
         with open(systemd_file, "w") as f:
@@ -302,6 +308,7 @@ WantedBy=multi-user.target
         yield f"Systemd service: {systemd_file}\n"
         yield f"Packer template: {packer_file}\n"
         yield f"User: {r['user']}\n"
+        yield f"Jupyter token: {jupyter_token}\n"
 
     def images(self):
         if not os.path.isdir(self.output_directory):
