@@ -1,13 +1,14 @@
-source "vagrant" "vb_ubuntu1804" {
+source "vagrant" "virtualbox" {
   communicator = "ssh"
-  source_path = "generic/ubuntu1804"
+  source_path = "ubuntu/bionic64"
+  # box_version = "v20200821.1.0"
   provider = "virtualbox"
   # add_force = true
 }
 
 build {
   sources = [
-    "source.vagrant.vb_ubuntu1804"
+    "source.vagrant.virtualbox"
   ]
 
   provisioner "shell" {
@@ -28,5 +29,7 @@ build {
       "sudo systemctl daemon-reload",
       "sudo systemctl enable repo2shellscript",
     ]
+    # Some environments such as conda can take a very long time to build
+    timeout = "30m"
   }
 }

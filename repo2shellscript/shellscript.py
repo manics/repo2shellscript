@@ -156,6 +156,12 @@ def dockerfile_to_bash(dockerfile, buildargs):
     return r
 
 
+def _template_file(output_file, **kwargs):
+    template = pkg_resources.read_text(resources, os.path.basename(output_file))
+    with open(output_file, "w") as f:
+        f.write(Template(template).substitute(**kwargs))
+
+
 class ShellScriptEngine(ContainerEngine):
     """
     ShellScript container engine
@@ -233,7 +239,10 @@ class ShellScriptEngine(ContainerEngine):
         build_file = os.path.join(builddir, "repo2shellscript-build.bash")
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
         systemd_file = os.path.join(builddir, "repo2shellscript.service")
-        packer_file = os.path.join(builddir, "repo2shellscript.pkr.hcl")
+        packer_files = [
+            os.path.join(builddir, f)
+            for f in ["repo2docker.pkr.hcl", "repo2vagrant.pkr.hcl"]
+        ]
 
         with open(build_file, "w") as f:
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
@@ -279,34 +288,24 @@ fi
         systemd_environment += f"Environment='JUPYTER_TOKEN={jupyter_token}'\n"
         # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#WorkingDirectory=
         work_dir = r["dir"] or "~"
-        with open(systemd_file, "w") as f:
-            f.write(
-                f"""\
-[Unit]
-Description=repo2shellscript
 
-[Service]
-User={r['user']}
-Restart=always
-RestartSec=10
-{systemd_environment}
-ExecStart={r['start']}
-WorkingDirectory={work_dir}
+        template_args = {
+            "user": r["user"],
+            "start": r["start"],
+            "systemd_environment": systemd_environment,
+            "tag": tag,
+            "work_dir": work_dir,
+        }
+        _template_file(systemd_file, **template_args)
 
-[Install]
-WantedBy=multi-user.target
-"""
-            )
-
-        packer = pkg_resources.read_text(resources, "repo2shellscript.pkr.hcl")
-        with open(packer_file, "w") as f:
-            f.write(packer)
+        for packer_file in packer_files:
+            _template_file(packer_file, **template_args)
 
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
         yield f"Start script: {start_file}\n"
         yield f"Systemd service: {systemd_file}\n"
-        yield f"Packer template: {packer_file}\n"
+        yield f"Packer templates: {' '.join(packer_files)}\n"
         yield f"User: {r['user']}\n"
         yield f"Jupyter token: {jupyter_token}\n"
 
