@@ -272,7 +272,7 @@ fi
             )
             for k, v in r["env"].items():
                 f.write(f"export {k}={v}\n")
-            f.write(f"export JUPYTER_TOKEN={jupyter_token}\n")
+            f.write(f"export JUPYTER_TOKEN=${{JUPYTER_TOKEN-{jupyter_token}}}\n")
             if r["dir"]:
                 f.write(f"cd {r['dir']}\n")
             f.write(f"exec {r['start']}\n")
