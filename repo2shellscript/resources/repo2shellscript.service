@@ -1,0 +1,13 @@
+[Unit]
+Description=repo2shellscript
+
+[Service]
+User=${user}
+Restart=always
+RestartSec=10
+${systemd_environment}
+ExecStart=${start}
+WorkingDirectory=${work_dir}
+
+[Install]
+WantedBy=multi-user.target

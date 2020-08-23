@@ -9,6 +9,14 @@ import tarfile
 from traitlets import Unicode
 from uuid import uuid4
 
+# https://stackoverflow.com/a/20885799
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    # Try backported to PY<37 `importlib_resources`.
+    import importlib_resources as pkg_resources
+from . import resources
+
 from repo2docker.engine import (
     ContainerEngine,
     Image,
@@ -30,85 +38,6 @@ def _sudo_user(user, bash, env):
     quoted = shlex.quote(bash)
     sudo = f"sudo -u {user} --preserve-env={envkeys} bash -c {quoted}"
     return sudo
-
-
-# https://github.com/docker-library/buildpack-deps/tree/f84f6184d79f2cb7ab94c365ac4f47915e7ca2a8/ubuntu/bionic
-# With the addition of
-# - sudo since it makes it easier to switch USER
-BUILDPACK_BIONIC = """\
-apt-get -qq update
-
-# buildpack-deps:bionic-curl
-# buildpack-deps:bionic-scm
-# buildpack-deps:bionic
-# + sudo
-
-apt-get -qq install --yes --no-install-recommends \
-    ca-certificates \
-    curl \
-    netbase \
-    wget \
-    \
-    gnupg \
-    dirmngr \
-    \
-    bzr \
-    git \
-    mercurial \
-    openssh-client \
-    subversion \
-    procps \
-    \
-    autoconf \
-    automake \
-    bzip2 \
-    dpkg-dev \
-    file \
-    g++ \
-    gcc \
-    imagemagick \
-    libbz2-dev \
-    libc6-dev \
-    libcurl4-openssl-dev \
-    libdb-dev \
-    libevent-dev \
-    libffi-dev \
-    libgdbm-dev \
-    libglib2.0-dev \
-    libgmp-dev \
-    libjpeg-dev \
-    libkrb5-dev \
-    liblzma-dev \
-    libmagickcore-dev \
-    libmagickwand-dev \
-    libmaxminddb-dev \
-    libncurses5-dev \
-    libncursesw5-dev \
-    libpng-dev \
-    libpq-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    libssl-dev \
-    libtool \
-    libwebp-dev \
-    libxml2-dev \
-    libxslt-dev \
-    libyaml-dev \
-    make \
-    patch \
-    unzip \
-    xz-utils \
-    zlib1g-dev \
-    \
-    sudo
-
-if apt-cache show 'default-libmysqlclient-dev' 2>/dev/null | grep -q '^Version:'; then
-    echo 'default-libmysqlclient-dev'
-else
-    echo 'libmysqlclient-dev'
-fi
-rm -rf /var/lib/apt/lists/*
-"""
 
 
 def _docker_copy(copy):
@@ -164,9 +93,11 @@ def dockerfile_to_bash(dockerfile, buildargs):
         if instruction in ("EXPOSE", "COMMENT", "LABEL"):
             pass
         elif instruction == "FROM":
-            if d["value"] != "buildpack-deps:bionic":
-                raise NotImplementedError(f"Base image {d['value']} no supported")
-            statement += BUILDPACK_BIONIC
+            try:
+                base_setup = pkg_resources.read_text(resources, f"{d['value']}.sh")
+            except FileNotFoundError:
+                raise NotImplementedError(f"Base image {d['value']} not supported")
+            statement += base_setup
         elif instruction == "ARG":
             argname = d["value"].split("=", 1)[0]
             try:
@@ -225,6 +156,12 @@ def dockerfile_to_bash(dockerfile, buildargs):
     return r
 
 
+def _template_file(output_file, **kwargs):
+    template = pkg_resources.read_text(resources, os.path.basename(output_file))
+    with open(output_file, "w") as f:
+        f.write(Template(template).substitute(**kwargs))
+
+
 class ShellScriptEngine(ContainerEngine):
     """
     ShellScript container engine
@@ -239,6 +176,9 @@ class ShellScriptEngine(ContainerEngine):
         allow_none=True,
         help="""
         Override the token used when Jupyter starts.
+
+        Set to the empty string to disable.
+        Default is a randomly generated string that is included in the output scripts.
         """,
     )
 
@@ -273,12 +213,18 @@ class ShellScriptEngine(ContainerEngine):
             tag = str(uuid4())
         # TODO: Delete existing directory
 
+        if self.jupyter_token is not None:
+            jupyter_token = self.jupyter_token
+        else:
+            jupyter_token = str(uuid4())
+
         if kwargs:
-            raise ValueError("Additional kwargs not supported")
+            raise NotImplementedError("Additional kwargs not supported")
+        # TODO: custom_context?
 
         builddir = os.path.join(self.output_directory, tag)
-        os.makedirs(builddir)
         if fileobj:
+            os.makedirs(builddir)
             tarf = tarfile.open(fileobj=fileobj)
             tarf.extractall(builddir)
         else:
@@ -293,6 +239,10 @@ class ShellScriptEngine(ContainerEngine):
         build_file = os.path.join(builddir, "repo2shellscript-build.bash")
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
         systemd_file = os.path.join(builddir, "repo2shellscript.service")
+        packer_files = [
+            os.path.join(builddir, f)
+            for f in ["repo2docker.pkr.hcl", "repo2vagrant.pkr.hcl"]
+        ]
 
         with open(build_file, "w") as f:
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
@@ -322,8 +272,7 @@ fi
             )
             for k, v in r["env"].items():
                 f.write(f"export {k}={v}\n")
-            if self.jupyter_token is not None:
-                f.write(f"export JUPYTER_TOKEN={self.jupyter_token}\n")
+            f.write(f"export JUPYTER_TOKEN=${{JUPYTER_TOKEN-{jupyter_token}}}\n")
             if r["dir"]:
                 f.write(f"cd {r['dir']}\n")
             f.write(f"exec {r['start']}\n")
@@ -336,34 +285,29 @@ fi
             )
             + "\n"
         )
-        if self.jupyter_token is not None:
-            systemd_environment += f"Environment='JUPYTER_TOKEN={self.jupyter_token}'\n"
+        systemd_environment += f"Environment='JUPYTER_TOKEN={jupyter_token}'\n"
         # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#WorkingDirectory=
         work_dir = r["dir"] or "~"
-        with open(systemd_file, "w") as f:
-            f.write(
-                f"""\
-[Unit]
-Description=repo2shellscript
 
-[Service]
-User={r['user']}
-Restart=always
-RestartSec=10
-{systemd_environment}
-ExecStart={r['start']}
-WorkingDirectory={work_dir}
+        template_args = {
+            "user": r["user"],
+            "start": r["start"],
+            "systemd_environment": systemd_environment,
+            "tag": tag,
+            "work_dir": work_dir,
+        }
+        _template_file(systemd_file, **template_args)
 
-[Install]
-WantedBy=multi-user.target
-"""
-            )
+        for packer_file in packer_files:
+            _template_file(packer_file, **template_args)
 
         yield f"Output directory: {builddir}\n"
         yield f"Build script: {build_file}\n"
         yield f"Start script: {start_file}\n"
         yield f"Systemd service: {systemd_file}\n"
+        yield f"Packer templates: {' '.join(packer_files)}\n"
         yield f"User: {r['user']}\n"
+        yield f"Jupyter token: {jupyter_token}\n"
 
     def images(self):
         if not os.path.isdir(self.output_directory):

@@ -7,6 +7,7 @@ setuptools.setup(
         "dockerfile-parse",
         "jupyter-repo2docker @ "
         "git+https://github.com/manics/repo2docker.git@abstractengine",
+        "importlib_resources;python_version<'3.7'",
     ],
     python_requires=">=3.5",
     author="Simon Li",
@@ -29,8 +30,6 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     entry_points={
-        "repo2docker.engines": [
-            "shellscript = repo2shellscript.shellscript:ShellScriptEngine"
-        ]
+        "repo2docker.engines": ["shellscript = repo2shellscript:ShellScriptEngine"]
     },
 )
