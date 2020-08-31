@@ -17,8 +17,8 @@ jobs:
   test:
     name: Test
     strategy:
-      # # Keep running so we can see if other tests pass
-      # fail-fast: false
+      # Keep running so we can see if other tests pass
+      fail-fast: false
       matrix:
         python-version:
           - '3.6'
