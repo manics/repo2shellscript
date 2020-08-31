@@ -1,0 +1,67 @@
+# https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Build
+on: [push, pull_request]
+
+jobs:
+
+  # https://github.com/pre-commit/action
+  pre-commit:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+
+  test:
+    name: Test
+    strategy:
+      # # Keep running so we can see if other tests pass
+      # fail-fast: false
+      matrix:
+        python-version:
+          - '3.6'
+          - '3.8'
+    env:
+      PACKER_VERSION: 1.6.1
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        id: cache
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+      - name: Cache packer
+        id: cachepacker
+        uses: actions/cache@v2
+        with:
+          path: ~/bin
+          key: ${{ runner.os }}-packer-${{ env.PACKER_VERSION }}
+      - name: Install dependencies
+        run: |
+          python -mpip install -r dev-requirements.txt
+      - name: Install repo2shellscript
+        run: python -mpip install .
+      - name: Download packer
+        if: steps.cachepacker.outputs.cache-hit != 'true'
+        run: |
+          mkdir ~/bin
+          cd ~/bin
+          wget -q https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip
+          unzip packer_${PACKER_VERSION}_linux_amd64.zip && rm packer_${PACKER_VERSION}_linux_amd64.zip
+      - name: Run pytest
+        run: pytest -v tests
+      - name: Run repo2shellscript scripts
+        run: ./run-docker-test.sh
