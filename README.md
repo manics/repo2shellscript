@@ -1,9 +1,9 @@
 # repo2shellscript
 
-[![Build Status](https://travis-ci.com/manics/repo2shellscript.svg?branch=master)](https://travis-ci.com/manics/repo2shellscript)
+[![Build](https://github.com/manics/repo2shellscript/workflows/Build/badge.svg)](https://github.com/manics/repo2shellscript/actions)
 
 `repo2shellscript` is a plugin for [repo2docker](http://repo2docker.readthedocs.io) that outputs a directory with a shell-script and required files.
-It does not build a container image, instead you should take the output and use it to build some other execution environment.
+It does not build a container image, instead you should take the output and use it to build some other execution environment, either by running the output scripts or using one of the included Packer templates.
 
 
 ## Installation
@@ -86,7 +86,7 @@ The [`ubuntu/bionic64`](https://app.vagrantup.com/ubuntu/boxes/bionic64) Vagrant
 
 ### Configuration file
 
-For convenience you may wish to set a fixed token instead of checking the startup logs for the generated token.
+For convenience you may wish to set a fixed token instead of the one randomly generated when the scripts are written.
 Create a repo2docker configuration file, such as `repo2docker_config.py` with
 
 ```py

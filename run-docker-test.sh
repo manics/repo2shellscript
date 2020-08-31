@@ -1,8 +1,6 @@
 #!/bin/bash
 set -eux
 
-pytest -v tests/
-
 IMAGE_NAME=test-repo2shellscript
 
 repo2docker --engine shellscript --user-id 1000 --user-name test --no-run --image-name $IMAGE_NAME https://github.com/binder-examples/conda
