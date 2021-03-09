@@ -54,7 +54,7 @@ def test_compare(tmp_path):
     # Normalise the outputs in-place
     for o in outputs:
         normalised_lines = list(_normalise_build_script(o.read_text().splitlines()))
-        o.write_text('\n'.join(normalised_lines) + '\n')
+        o.write_text("\n".join(normalised_lines) + "\n")
 
     # To update reference-outputs/test/:
     # print(tmp_path)

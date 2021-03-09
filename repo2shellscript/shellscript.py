@@ -272,10 +272,10 @@ class ShellScriptEngine(ContainerEngine):
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
             # in the script
             f.write(
-                f"""\
+                """\
 #!/usr/bin/env bash
 set -eux
-_REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${{BASH_SOURCE[0]}}" )" && pwd)
+_REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 """
             )
