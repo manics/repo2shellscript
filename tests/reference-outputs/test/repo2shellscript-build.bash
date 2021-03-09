@@ -197,7 +197,7 @@ if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fcon
     done
 else
     cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
-    chown 1002:1002 "$i"
+    chown 1002:1002 "/etc/profile.d/activate-conda.sh"
 fi
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
@@ -208,7 +208,7 @@ if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fcon
     done
 else
     cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
-    chown 1002:1002 "$i"
+    chown 1002:1002 "/tmp/environment.yml"
 fi
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
@@ -219,7 +219,7 @@ if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fcon
     done
 else
     cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
-    chown 1002:1002 "$i"
+    chown 1002:1002 "/tmp/install-miniforge.bash"
 fi
 
 # RUN mkdir -p ${NPM_DIR} && \
@@ -294,7 +294,7 @@ if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ]; then
     done
 else
     cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ${REPO_DIR}/environment.yml
-    chown 1002:1002 "$i"
+    chown 1002:1002 "${REPO_DIR}/environment.yml"
 fi
 
 # USER ${NB_USER}
@@ -316,7 +316,7 @@ if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src ]; then
     done
 else
     cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src ${REPO_DIR}
-    chown 1002:1002 "$i"
+    chown 1002:1002 "${REPO_DIR}"
 fi
 
 # Run assemble scripts! These will actually turn the specification

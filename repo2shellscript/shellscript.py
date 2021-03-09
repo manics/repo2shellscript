@@ -63,7 +63,7 @@ if [ -d {p} ]; then
     done
 else
     cp {p} {dest}
-    chown {chown} "$i"
+    chown {chown} "{dest}"
 fi
 """
         else:
