@@ -1,7 +1,7 @@
 
 FROM buildpack-deps:bionic
 
-# avoid prompts from apt
+# Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Set up locales properly
@@ -41,8 +41,8 @@ RUN groupadd \
 
 RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - && \
     DISTRO="bionic" && \
-    echo "deb https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
-    echo "deb-src https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
+    echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
+    echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
 
 # Base package installs are not super interesting to users, so hide their outputs
 # If install fails for some reason, errors will still be printed
@@ -69,11 +69,11 @@ ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
 ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
 # If scripts required during build are present, copy them
 
-COPY <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
 
-COPY <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
 
-COPY <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
 RUN mkdir -p ${NPM_DIR} && \
 chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 
@@ -81,7 +81,8 @@ USER ${NB_USER}
 RUN npm config --global set prefix ${NPM_DIR}
 
 USER root
-RUN bash /tmp/install-miniforge.bash && \
+RUN TIMEFORMAT='time: %3R' \
+bash -c 'time /tmp/install-miniforge.bash' && \
 rm /tmp/install-miniforge.bash /tmp/environment.yml
 
 
@@ -90,6 +91,7 @@ rm /tmp/install-miniforge.bash /tmp/environment.yml
 ARG REPO_DIR=${HOME}
 ENV REPO_DIR ${REPO_DIR}
 WORKDIR ${REPO_DIR}
+RUN chown ${NB_USER}:${NB_USER} ${REPO_DIR}
 
 # We want to allow two things:
 #   1. If there's a .local/bin directory in the repo, things there
@@ -109,21 +111,18 @@ ENV CONDA_DEFAULT_ENV ${KERNEL_PYTHON_PREFIX}
 # example installing APT packages.
 # If scripts required during build are present, copy them
 
-COPY src/environment.yml ${REPO_DIR}/environment.yml
-USER root
-RUN chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
+COPY --chown=1002:1002 src/environment.yml ${REPO_DIR}/environment.yml
 USER ${NB_USER}
-RUN conda env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
-conda clean --all -f -y && \
-conda list -p ${NB_PYTHON_PREFIX}
+RUN TIMEFORMAT='time: %3R' \
+bash -c 'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
+time mamba clean --all -f -y && \
+mamba list -p ${NB_PYTHON_PREFIX} \
+'
 
 
 
-# Copy and chown stuff. This doubles the size of the repo, because
-# you can't actually copy as USER, only as root! Thanks, Docker!
-USER root
-COPY src/ ${REPO_DIR}
-RUN chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
+# Copy stuff.
+COPY --chown=1002:1002 src/ ${REPO_DIR}
 
 # Run assemble scripts! These will actually turn the specification
 # in the repository into an image.
@@ -135,7 +134,7 @@ RUN chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
 
 LABEL repo2docker.ref="577865357337eb0b562fc747afb9e98b4a7bcacc"
 LABEL repo2docker.repo="https://github.com/binder-examples/conda"
-LABEL repo2docker.version="0.11.0+129.geed8c99"
+LABEL repo2docker.version= <normalised>
 
 # We always want containers to run as non-root
 USER ${NB_USER}

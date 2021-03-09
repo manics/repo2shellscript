@@ -80,7 +80,7 @@ else
 fi
 rm -rf /var/lib/apt/lists/*
 
-# avoid prompts from apt
+# Avoid prompts from apt
 
 # ENV DEBIAN_FRONTEND=noninteractive
 export DEBIAN_FRONTEND=noninteractive
@@ -141,9 +141,9 @@ groupadd         --gid ${NB_UID}         ${NB_USER} &&     useradd         --com
 
 # RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - && \
 #     DISTRO="bionic" && \
-#     echo "deb https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
-#     echo "deb-src https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
-wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - &&     DISTRO="bionic" &&     echo "deb https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list &&     echo "deb-src https://deb.nodesource.com/node_10.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
+#     echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
+#     echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
+wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - &&     DISTRO="bionic" &&     echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list &&     echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
 
 # Base package installs are not super interesting to users, so hide their outputs
 
@@ -189,14 +189,38 @@ export PATH=/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/
 
 # If scripts required during build are present, copy them
 
-# COPY <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh * /etc/profile.d/activate-conda.sh; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh; fi
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh *; do
+        cp -a "$i" /etc/profile.d/activate-conda.sh;
+        chown -R 1002:1002 /etc/profile.d/activate-conda.sh/"`basename "$i"`"
+    done
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
+    chown 1002:1002 "/etc/profile.d/activate-conda.sh"
+fi
 
-# COPY <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml * /tmp/environment.yml; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml; fi
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml *; do
+        cp -a "$i" /tmp/environment.yml;
+        chown -R 1002:1002 /tmp/environment.yml/"`basename "$i"`"
+    done
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
+    chown 1002:1002 "/tmp/environment.yml"
+fi
 
-# COPY <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash * /tmp/install-miniforge.bash; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash; fi
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash *; do
+        cp -a "$i" /tmp/install-miniforge.bash;
+        chown -R 1002:1002 /tmp/install-miniforge.bash/"`basename "$i"`"
+    done
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
+    chown 1002:1002 "/tmp/install-miniforge.bash"
+fi
 
 # RUN mkdir -p ${NPM_DIR} && \
 # chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
@@ -209,9 +233,10 @@ sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_
 
 # USER root
 
-# RUN bash /tmp/install-miniforge.bash && \
+# RUN TIMEFORMAT='time: %3R' \
+# bash -c 'time /tmp/install-miniforge.bash' && \
 # rm /tmp/install-miniforge.bash /tmp/environment.yml
-bash /tmp/install-miniforge.bash && rm /tmp/install-miniforge.bash /tmp/environment.yml
+TIMEFORMAT='time: %3R' bash -c 'time /tmp/install-miniforge.bash' && rm /tmp/install-miniforge.bash /tmp/environment.yml
 
 # Allow target path repo is cloned to be configurable
 
@@ -223,6 +248,9 @@ export REPO_DIR=/home/test
 
 # WORKDIR ${REPO_DIR}
 cd ${REPO_DIR}
+
+# RUN chown ${NB_USER}:${NB_USER} ${REPO_DIR}
+chown ${NB_USER}:${NB_USER} ${REPO_DIR}
 
 # We want to allow two things:
 
@@ -258,32 +286,38 @@ export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook
 
 # If scripts required during build are present, copy them
 
-# COPY src/environment.yml ${REPO_DIR}/environment.yml
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml/* ${REPO_DIR}/environment.yml; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ${REPO_DIR}/environment.yml; fi
-
-# USER root
-
-# RUN chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
-chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
+# COPY --chown=1002:1002 src/environment.yml ${REPO_DIR}/environment.yml
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml/*; do
+        cp -a "$i" ${REPO_DIR}/environment.yml;
+        chown -R 1002:1002 ${REPO_DIR}/environment.yml/"`basename "$i"`"
+    done
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ${REPO_DIR}/environment.yml
+    chown 1002:1002 "${REPO_DIR}/environment.yml"
+fi
 
 # USER ${NB_USER}
 
-# RUN conda env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
-# conda clean --all -f -y && \
-# conda list -p ${NB_PYTHON_PREFIX}
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'conda env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && conda clean --all -f -y && conda list -p ${NB_PYTHON_PREFIX}'
+# RUN TIMEFORMAT='time: %3R' \
+# bash -c 'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
+# time mamba clean --all -f -y && \
+# mamba list -p ${NB_PYTHON_PREFIX} \
+# '
+sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && time mamba clean --all -f -y && mamba list -p ${NB_PYTHON_PREFIX} '"'"''
 
-# Copy and chown stuff. This doubles the size of the repo, because
+# Copy stuff.
 
-# you can't actually copy as USER, only as root! Thanks, Docker!
-
-# USER root
-
-# COPY src/ ${REPO_DIR}
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/src/* ${REPO_DIR}; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src ${REPO_DIR}; fi
-
-# RUN chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
-chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
+# COPY --chown=1002:1002 src/ ${REPO_DIR}
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/src/*; do
+        cp -a "$i" ${REPO_DIR};
+        chown -R 1002:1002 ${REPO_DIR}/"`basename "$i"`"
+    done
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src ${REPO_DIR}
+    chown 1002:1002 "${REPO_DIR}"
+fi
 
 # Run assemble scripts! These will actually turn the specification
 
@@ -299,7 +333,7 @@ chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
 
 # LABEL repo2docker.repo="https://github.com/binder-examples/conda"
 
-# LABEL repo2docker.version="0.11.0+129.geed8c99"
+# LABEL repo2docker.version= <normalised>
 
 # We always want containers to run as non-root
 
@@ -310,7 +344,11 @@ chown -R ${NB_USER}:${NB_USER} ${REPO_DIR}
 # Add entrypoint
 
 # COPY /repo2docker-entrypoint /usr/local/bin/repo2docker-entrypoint
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint ]; then cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint/* /usr/local/bin/repo2docker-entrypoint; else cp "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint /usr/local/bin/repo2docker-entrypoint; fi
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint ]; then
+    cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint/* /usr/local/bin/repo2docker-entrypoint
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint /usr/local/bin/repo2docker-entrypoint
+fi
 
 # ENTRYPOINT ["/usr/local/bin/repo2docker-entrypoint"]
 

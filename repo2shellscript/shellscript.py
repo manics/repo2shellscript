@@ -2,6 +2,7 @@
 from dockerfile_parse import DockerfileParser
 import json
 import os
+import re
 import shlex
 from shutil import copytree
 from string import Template
@@ -40,7 +41,7 @@ def _sudo_user(user, bash, env):
     return sudo
 
 
-def _docker_copy(copy):
+def _docker_copy(copy, chown):
     # Since this is run inside the environment we need to ensure path is absolute.
     # Also need to deal with copying the contents of directories to match Docker.
     paths = shlex.split(copy)
@@ -53,7 +54,26 @@ def _docker_copy(copy):
         p = os.path.join(
             '"${_REPO2SHELLSCRIPT_SRCDIR}"', shlex.quote(paths[n].strip("/"))
         )
-        statement += f"if [ -d {p} ]; then cp -a {p}/* {dest}; else cp {p} {dest}; fi\n"
+        if chown:
+            statement += f"""\
+if [ -d {p} ]; then
+    for i in {p}/*; do
+        cp -a "$i" {dest};
+        chown -R {chown} {dest}/"`basename "$i"`"
+    done
+else
+    cp {p} {dest}
+    chown {chown} "{dest}"
+fi
+"""
+        else:
+            statement += f"""\
+if [ -d {p} ]; then
+    cp -a {p}/* {dest}
+else
+    cp {p} {dest}
+fi
+"""
     return statement
 
 
@@ -114,7 +134,11 @@ def dockerfile_to_bash(dockerfile, buildargs):
         elif instruction == "CMD":
             cmd = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "COPY":
-            statement += _docker_copy(d["value"])
+            m = re.match(r"--chown[=\s+](\S+)\s+(.+)", d["value"])
+            if m:
+                statement += _docker_copy(m.group(2), m.group(1))
+            else:
+                statement += _docker_copy(d["value"], None)
         elif instruction == "ENTRYPOINT":
             entrypoint = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "ENV":
@@ -248,10 +272,10 @@ class ShellScriptEngine(ContainerEngine):
             # Set _REPO2SHELLSCRIPT_SRCDIR so that we can reference the source dir
             # in the script
             f.write(
-                f"""\
+                """\
 #!/usr/bin/env bash
 set -eux
-_REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${{BASH_SOURCE[0]}}" )" && pwd)
+_REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
 """
             )

@@ -1,11 +1,11 @@
 repos:
-- repo: https://github.com/ambv/black
-  rev: 19.10b0
+- repo: https://github.com/psf/black
+  rev: 20.8b1
   hooks:
   - id: black
     args: [--target-version=py35]
 - repo: https://gitlab.com/pycqa/flake8
-  rev: 3.7.9
+  rev: 3.8.4
   hooks:
   - id: flake8
     # default black line length is 88

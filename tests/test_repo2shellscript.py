@@ -16,10 +16,10 @@ def _normalise_build_script(lines):
     for line in lines:
         line = re.sub(
             r"build_script_files/\S+-2fsite-2dpackages-2f(\S+)-\w+(\s+|/)",
-            "<normalised>\\1 ",
+            r"<normalised>\1 ",
             line,
         )
-        line = re.sub(r"(LABEL repo2docker.version=)\S+", r"\\1 <normalised>", line)
+        line = re.sub(r"(LABEL repo2docker.version=)\S+", r"\1 <normalised>", line)
         yield line
 
 
@@ -51,6 +51,14 @@ def test_compare(tmp_path):
         Path(__file__).parent / "reference-outputs"
     )
     outputs, relative_outputs = _recursive_filelist(tmp_path)
+    # Normalise the outputs in-place
+    for o in outputs:
+        normalised_lines = list(_normalise_build_script(o.read_text().splitlines()))
+        o.write_text("\n".join(normalised_lines) + "\n")
+
+    # To update reference-outputs/test/:
+    # print(tmp_path)
+    # And copy those files, updating as necessary
 
     assert sorted(relative_files) == sorted(relative_outputs)
     for f, o in zip(sorted(files), sorted(outputs)):
