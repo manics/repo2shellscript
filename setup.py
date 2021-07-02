@@ -6,7 +6,7 @@ setuptools.setup(
     install_requires=[
         "dockerfile-parse",
         # "jupyter-repo2docker@git+https://github.com/manics/repo2docker.git@abstractengine",
-        "jupyter-repo2docker@git+https://github.com/manics/repo2docker.git@878ff31b9c7c15f0baa41c8bb142997324d0442e",  # noqa: E501
+        "jupyter-repo2docker@git+https://github.com/manics/repo2docker.git@d47b74492f966241e217735aad508e6f3d005b29",  # noqa: E501
         "importlib_resources;python_version<'3.7'",
     ],
     python_requires=">=3.5",
