@@ -21,6 +21,7 @@ Environment='KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook'
 Environment='PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 Environment='REPO_DIR=/home/test'
 Environment='CONDA_DEFAULT_ENV=/srv/conda/envs/notebook'
+Environment='PYTHONUNBUFFERED=1'
 Environment='JUPYTER_TOKEN=test-token'
 
 ExecStart=/usr/local/bin/repo2docker-entrypoint jupyter notebook --ip 0.0.0.0

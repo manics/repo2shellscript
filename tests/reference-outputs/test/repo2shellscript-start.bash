@@ -20,6 +20,7 @@ export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
 export PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export REPO_DIR=/home/test
 export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook
+export PYTHONUNBUFFERED=1
 export JUPYTER_TOKEN=${JUPYTER_TOKEN-test-token}
 cd /home/test
 exec /usr/local/bin/repo2docker-entrypoint jupyter notebook --ip 0.0.0.0
