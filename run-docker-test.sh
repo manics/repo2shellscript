@@ -12,6 +12,17 @@ packer build repo2docker.pkr.hcl
 docker run -d --name test -p 8888:8888 $IMAGE_NAME
 sleep 5
 
-# URL=$(docker logs repo2shellscript | grep 'http://127.0.0.1:8888/?token=' | tail -n1 | awk '{print $2}')
-
-curl -f http://127.0.0.1:8888/api
+# If container is slow to start the reply may be empty, so retry
+URL=http://127.0.0.1:8888/api
+i=0
+while ! curl --fail $URL; do
+    i=$(($i+1))
+    if [ $i -ge 5 ]; then
+        echo "$(date) - $URL failed, giving up"
+        echo "docker logs:"
+        docker logs test
+        exit 1
+    fi
+    echo "$(date) - $URL failed, retrying ..."
+    sleep 5
+done
