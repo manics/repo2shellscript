@@ -343,6 +343,16 @@ fi
 
 # Add entrypoint
 
+# ENV PYTHONUNBUFFERED=1
+export PYTHONUNBUFFERED=1
+
+# COPY /python3-login /usr/local/bin/python3-login
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/python3-login ]; then
+    cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/python3-login/* /usr/local/bin/python3-login
+else
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/python3-login /usr/local/bin/python3-login
+fi
+
 # COPY /repo2docker-entrypoint /usr/local/bin/repo2docker-entrypoint
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint ]; then
     cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint/* /usr/local/bin/repo2docker-entrypoint
