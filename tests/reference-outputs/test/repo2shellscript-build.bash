@@ -193,6 +193,7 @@ export PATH=/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/
 # If scripts required during build are present, copy them
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
+mkdir -p "`dirname /etc/profile.d/activate-conda.sh`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh *; do
         cp -a "$i" /etc/profile.d/activate-conda.sh;
@@ -204,6 +205,7 @@ else
 fi
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+mkdir -p "`dirname /tmp/env/environment.lock`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock *; do
         cp -a "$i" /tmp/env/environment.lock;
@@ -215,6 +217,7 @@ else
 fi
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
+mkdir -p "`dirname /tmp/install-miniforge.bash`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash *; do
         cp -a "$i" /tmp/install-miniforge.bash;
@@ -290,6 +293,7 @@ export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook
 # If scripts required during build are present, copy them
 
 # COPY --chown=1002:1002 src/environment.yml ${REPO_DIR}/environment.yml
+mkdir -p "`dirname ${REPO_DIR}/environment.yml`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/src/environment.yml/*; do
         cp -a "$i" ${REPO_DIR}/environment.yml;
@@ -312,6 +316,7 @@ sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_
 # Copy stuff.
 
 # COPY --chown=1002:1002 src/ ${REPO_DIR}
+mkdir -p "`dirname ${REPO_DIR}`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/src/*; do
         cp -a "$i" ${REPO_DIR};
@@ -350,6 +355,7 @@ fi
 export PYTHONUNBUFFERED=1
 
 # COPY /python3-login /usr/local/bin/python3-login
+mkdir -p "`dirname /usr/local/bin/python3-login`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/python3-login ]; then
     cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/python3-login/* /usr/local/bin/python3-login
 else
@@ -357,6 +363,7 @@ else
 fi
 
 # COPY /repo2docker-entrypoint /usr/local/bin/repo2docker-entrypoint
+mkdir -p "`dirname /usr/local/bin/repo2docker-entrypoint`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint ]; then
     cp -a "${_REPO2SHELLSCRIPT_SRCDIR}"/repo2docker-entrypoint/* /usr/local/bin/repo2docker-entrypoint
 else
