@@ -179,6 +179,9 @@ export CONDA_DIR=/srv/conda
 # ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
 export NB_PYTHON_PREFIX=/srv/conda/envs/notebook
 
+# ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
+export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
+
 # ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
 
@@ -200,15 +203,15 @@ else
     chown 1002:1002 "/etc/profile.d/activate-conda.sh"
 fi
 
-# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml ]; then
-    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml *; do
-        cp -a "$i" /tmp/environment.yml;
-        chown -R 1002:1002 /tmp/environment.yml/"`basename "$i"`"
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock *; do
+        cp -a "$i" /tmp/env/environment.lock;
+        chown -R 1002:1002 /tmp/env/environment.lock/"`basename "$i"`"
     done
 else
-    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
-    chown 1002:1002 "/tmp/environment.yml"
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+    chown 1002:1002 "/tmp/env/environment.lock"
 fi
 
 # COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
@@ -229,14 +232,14 @@ mkdir -p ${NPM_DIR} && chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 # USER ${NB_USER}
 
 # RUN npm config --global set prefix ${NPM_DIR}
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,KERNEL_PYTHON_PREFIX,PATH bash -c 'npm config --global set prefix ${NPM_DIR}'
+sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,NB_ENVIRONMENT_FILE,KERNEL_PYTHON_PREFIX,PATH bash -c 'npm config --global set prefix ${NPM_DIR}'
 
 # USER root
 
 # RUN TIMEFORMAT='time: %3R' \
 # bash -c 'time /tmp/install-miniforge.bash' && \
-# rm /tmp/install-miniforge.bash /tmp/environment.yml
-TIMEFORMAT='time: %3R' bash -c 'time /tmp/install-miniforge.bash' && rm /tmp/install-miniforge.bash /tmp/environment.yml
+# rm -rf /tmp/install-miniforge.bash /tmp/env
+TIMEFORMAT='time: %3R' bash -c 'time /tmp/install-miniforge.bash' && rm -rf /tmp/install-miniforge.bash /tmp/env
 
 # Allow target path repo is cloned to be configurable
 
@@ -304,7 +307,7 @@ fi
 # time mamba clean --all -f -y && \
 # mamba list -p ${NB_PYTHON_PREFIX} \
 # '
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && time mamba clean --all -f -y && mamba list -p ${NB_PYTHON_PREFIX} '"'"''
+sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,NB_ENVIRONMENT_FILE,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && time mamba clean --all -f -y && mamba list -p ${NB_PYTHON_PREFIX} '"'"''
 
 # Copy stuff.
 
