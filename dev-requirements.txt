@@ -1,4 +1,4 @@
 dockerfile-parse==1.2.0
-git+https://github.com/manics/repo2docker.git@520c7add7dd21b411baf00062ffda61716d9c333
+git+https://github.com/jupyterhub/repo2docker.git@df65135795a0ecf40dcaa0f15b62f6a85182d3e1
 pre-commit==2.13.0
 pytest==6.2.4
