@@ -64,6 +64,7 @@ ENV NPM_DIR ${APP_BASE}/npm
 ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
 ENV CONDA_DIR ${APP_BASE}/conda
 ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
+ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
 ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
 # Special case PATH
 ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
@@ -71,7 +72,7 @@ ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
 
 COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
 
-COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2efrozen-2eyml /tmp/environment.yml
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
 
 COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
 RUN mkdir -p ${NPM_DIR} && \
@@ -83,7 +84,7 @@ RUN npm config --global set prefix ${NPM_DIR}
 USER root
 RUN TIMEFORMAT='time: %3R' \
 bash -c 'time /tmp/install-miniforge.bash' && \
-rm /tmp/install-miniforge.bash /tmp/environment.yml
+rm -rf /tmp/install-miniforge.bash /tmp/env
 
 
 

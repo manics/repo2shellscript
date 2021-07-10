@@ -16,6 +16,7 @@ export NPM_DIR=/srv/npm
 export NPM_CONFIG_GLOBALCONFIG=/srv/npm/npmrc
 export CONDA_DIR=/srv/conda
 export NB_PYTHON_PREFIX=/srv/conda/envs/notebook
+export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
 export PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export REPO_DIR=/home/test

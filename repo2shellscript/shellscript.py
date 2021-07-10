@@ -54,6 +54,7 @@ def _docker_copy(copy, chown):
         p = os.path.join(
             '"${_REPO2SHELLSCRIPT_SRCDIR}"', shlex.quote(paths[n].strip("/"))
         )
+        statement += f'mkdir -p "`dirname {dest}`"\n'
         if chown:
             statement += f"""\
 if [ -d {p} ]; then
