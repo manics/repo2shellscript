@@ -10,7 +10,7 @@ It does not build a container image, instead you should take the output and use 
 
 This plugin is still in development and relies on [a new feature of repo2docker](https://github.com/jupyter/repo2docker/pull/848).
 
-    pip install -U git+https://github.com/jupyterhub/repo2docker.git@master
+    pip install -U git+https://github.com/jupyterhub/repo2docker.git@main
     pip install -U git+https://github.com/manics/repo2shellscript.git@main
 
 

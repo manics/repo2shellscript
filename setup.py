@@ -5,7 +5,7 @@ setuptools.setup(
     # https://github.com/jupyter/repo2docker/pull/848 was merged!
     install_requires=[
         "dockerfile-parse",
-        "jupyter-repo2docker@git+https://github.com/jupyterhub/repo2docker.git@master",  # noqa: E501
+        "jupyter-repo2docker@git+https://github.com/jupyterhub/repo2docker.git@main",  # noqa: E501
         "importlib_resources;python_version<'3.7'",
     ],
     python_requires=">=3.5",
