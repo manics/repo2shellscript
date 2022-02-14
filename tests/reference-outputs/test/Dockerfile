@@ -39,17 +39,11 @@ RUN groupadd \
         --uid ${NB_UID} \
         ${NB_USER}
 
-RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - && \
-    DISTRO="bionic" && \
-    echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
-    echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
-
 # Base package installs are not super interesting to users, so hide their outputs
 # If install fails for some reason, errors will still be printed
 RUN apt-get -qq update && \
     apt-get -qq install --yes --no-install-recommends \
        less \
-       nodejs \
        unzip \
        > /dev/null && \
     apt-get -qq purge && \
@@ -60,11 +54,13 @@ EXPOSE 8888
 
 # Environment variables required for build
 ENV APP_BASE /srv
-ENV NPM_DIR ${APP_BASE}/npm
-ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
 ENV CONDA_DIR ${APP_BASE}/conda
 ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
+ENV NPM_DIR ${APP_BASE}/npm
+ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
 ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
+ENV MAMBA_ROOT_PREFIX ${CONDA_DIR}
+ENV MAMBA_EXE ${CONDA_DIR}/bin/mamba
 ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
 # Special case PATH
 ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
@@ -74,19 +70,17 @@ COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2
 
 COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
 
-COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash /tmp/install-base-env.bash
+RUN TIMEFORMAT='time: %3R' \
+bash -c 'time /tmp/install-base-env.bash' && \
+rm -rf /tmp/install-base-env.bash /tmp/env
+
 RUN mkdir -p ${NPM_DIR} && \
 chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 
-USER ${NB_USER}
-RUN npm config --global set prefix ${NPM_DIR}
 
+# ensure root user after build scripts
 USER root
-RUN TIMEFORMAT='time: %3R' \
-bash -c 'time /tmp/install-miniforge.bash' && \
-rm -rf /tmp/install-miniforge.bash /tmp/env
-
-
 
 # Allow target path repo is cloned to be configurable
 ARG REPO_DIR=${HOME}
@@ -115,12 +109,14 @@ ENV CONDA_DEFAULT_ENV ${KERNEL_PYTHON_PREFIX}
 COPY --chown=1002:1002 src/environment.yml ${REPO_DIR}/environment.yml
 USER ${NB_USER}
 RUN TIMEFORMAT='time: %3R' \
-bash -c 'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
-time mamba clean --all -f -y && \
-mamba list -p ${NB_PYTHON_PREFIX} \
+bash -c 'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && \
+time ${MAMBA_EXE} clean --all -f -y && \
+${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} \
 '
 
 
+# ensure root user after preassemble scripts
+USER root
 
 # Copy stuff.
 COPY --chown=1002:1002 src/ ${REPO_DIR}

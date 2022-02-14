@@ -5,10 +5,10 @@ setuptools.setup(
     # https://github.com/jupyter/repo2docker/pull/848 was merged!
     install_requires=[
         "dockerfile-parse",
-        "jupyter-repo2docker@git+https://github.com/jupyterhub/repo2docker.git@master",  # noqa: E501
+        "jupyter-repo2docker>=2022.02.0",
         "importlib_resources;python_version<'3.7'",
     ],
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     author="Simon Li",
     url="https://github.com/manics/repo2shellscript",
     description="Repo2docker shell-script extension",
