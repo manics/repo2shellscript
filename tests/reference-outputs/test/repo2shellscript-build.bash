@@ -139,12 +139,6 @@ export HOME=/home/test
 #         ${NB_USER}
 groupadd         --gid ${NB_UID}         ${NB_USER} &&     useradd         --comment "Default user"         --create-home         --gid ${NB_UID}         --no-log-init         --shell /bin/bash         --uid ${NB_UID}         ${NB_USER}
 
-# RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - && \
-#     DISTRO="bionic" && \
-#     echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list && \
-#     echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
-wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-key add - &&     DISTRO="bionic" &&     echo "deb https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list &&     echo "deb-src https://deb.nodesource.com/node_14.x $DISTRO main" >> /etc/apt/sources.list.d/nodesource.list
-
 # Base package installs are not super interesting to users, so hide their outputs
 
 # If install fails for some reason, errors will still be printed
@@ -152,13 +146,12 @@ wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key |  apt-ke
 # RUN apt-get -qq update && \
 #     apt-get -qq install --yes --no-install-recommends \
 #        less \
-#        nodejs \
 #        unzip \
 #        > /dev/null && \
 #     apt-get -qq purge && \
 #     apt-get -qq clean && \
 #     rm -rf /var/lib/apt/lists/*
-apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends        less        nodejs        unzip        > /dev/null &&     apt-get -qq purge &&     apt-get -qq clean &&     rm -rf /var/lib/apt/lists/*
+apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends        less        unzip        > /dev/null &&     apt-get -qq purge &&     apt-get -qq clean &&     rm -rf /var/lib/apt/lists/*
 
 # EXPOSE 8888
 
@@ -167,20 +160,26 @@ apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends     
 # ENV APP_BASE /srv
 export APP_BASE=/srv
 
-# ENV NPM_DIR ${APP_BASE}/npm
-export NPM_DIR=/srv/npm
-
-# ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
-export NPM_CONFIG_GLOBALCONFIG=/srv/npm/npmrc
-
 # ENV CONDA_DIR ${APP_BASE}/conda
 export CONDA_DIR=/srv/conda
 
 # ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
 export NB_PYTHON_PREFIX=/srv/conda/envs/notebook
 
+# ENV NPM_DIR ${APP_BASE}/npm
+export NPM_DIR=/srv/npm
+
+# ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
+export NPM_CONFIG_GLOBALCONFIG=/srv/npm/npmrc
+
 # ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
 export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
+
+# ENV MAMBA_ROOT_PREFIX ${CONDA_DIR}
+export MAMBA_ROOT_PREFIX=/srv/conda
+
+# ENV MAMBA_EXE ${CONDA_DIR}/bin/mamba
+export MAMBA_EXE=/srv/conda/bin/mamba
 
 # ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
@@ -216,33 +215,30 @@ else
     chown 1002:1002 "/tmp/env/environment.lock"
 fi
 
-# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
-mkdir -p "`dirname /tmp/install-miniforge.bash`"
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash ]; then
-    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash *; do
-        cp -a "$i" /tmp/install-miniforge.bash;
-        chown -R 1002:1002 /tmp/install-miniforge.bash/"`basename "$i"`"
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash /tmp/install-base-env.bash
+mkdir -p "`dirname /tmp/install-base-env.bash`"
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash *; do
+        cp -a "$i" /tmp/install-base-env.bash;
+        chown -R 1002:1002 /tmp/install-base-env.bash/"`basename "$i"`"
     done
 else
-    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dminiforge-2ebash /tmp/install-miniforge.bash
-    chown 1002:1002 "/tmp/install-miniforge.bash"
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash /tmp/install-base-env.bash
+    chown 1002:1002 "/tmp/install-base-env.bash"
 fi
+
+# RUN TIMEFORMAT='time: %3R' \
+# bash -c 'time /tmp/install-base-env.bash' && \
+# rm -rf /tmp/install-base-env.bash /tmp/env
+TIMEFORMAT='time: %3R' bash -c 'time /tmp/install-base-env.bash' && rm -rf /tmp/install-base-env.bash /tmp/env
 
 # RUN mkdir -p ${NPM_DIR} && \
 # chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 mkdir -p ${NPM_DIR} && chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 
-# USER ${NB_USER}
-
-# RUN npm config --global set prefix ${NPM_DIR}
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,NB_ENVIRONMENT_FILE,KERNEL_PYTHON_PREFIX,PATH bash -c 'npm config --global set prefix ${NPM_DIR}'
+# ensure root user after build scripts
 
 # USER root
-
-# RUN TIMEFORMAT='time: %3R' \
-# bash -c 'time /tmp/install-miniforge.bash' && \
-# rm -rf /tmp/install-miniforge.bash /tmp/env
-TIMEFORMAT='time: %3R' bash -c 'time /tmp/install-miniforge.bash' && rm -rf /tmp/install-miniforge.bash /tmp/env
 
 # Allow target path repo is cloned to be configurable
 
@@ -307,11 +303,15 @@ fi
 # USER ${NB_USER}
 
 # RUN TIMEFORMAT='time: %3R' \
-# bash -c 'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && \
-# time mamba clean --all -f -y && \
-# mamba list -p ${NB_PYTHON_PREFIX} \
+# bash -c 'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && \
+# time ${MAMBA_EXE} clean --all -f -y && \
+# ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} \
 # '
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,CONDA_DIR,NB_PYTHON_PREFIX,NB_ENVIRONMENT_FILE,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time mamba env update -p ${NB_PYTHON_PREFIX} -f "environment.yml" && time mamba clean --all -f -y && mamba list -p ${NB_PYTHON_PREFIX} '"'"''
+sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,CONDA_DIR,NB_PYTHON_PREFIX,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,NB_ENVIRONMENT_FILE,MAMBA_ROOT_PREFIX,MAMBA_EXE,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && time ${MAMBA_EXE} clean --all -f -y && ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} '"'"''
+
+# ensure root user after preassemble scripts
+
+# USER root
 
 # Copy stuff.
 
