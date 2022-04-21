@@ -229,7 +229,7 @@ class ShellScriptEngine(ContainerEngine):
         dockerfile="",
         fileobj=None,
         path="",
-        **kwargs
+        **kwargs,
     ):
 
         buildargs = buildargs or {}
@@ -358,6 +358,6 @@ fi
         publish_all_ports=False,
         remove=False,
         volumes=None,
-        **kwargs
+        **kwargs,
     ):
         raise NotImplementedError("run() is not supported")
