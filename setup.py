@@ -8,7 +8,7 @@ setuptools.setup(
         "jupyter-repo2docker>=2022.02.0",
         "importlib_resources;python_version<'3.7'",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     author="Simon Li",
     url="https://github.com/manics/repo2shellscript",
     description="Repo2docker shell-script extension",
