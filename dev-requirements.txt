@@ -1,4 +1,4 @@
 dockerfile-parse==1.2.0
 jupyter-repo2docker==2022.2.0
 pre-commit==2.18.1
-pytest==7.0.1
+pytest==7.1.1
