@@ -1,8 +1,16 @@
 from difflib import unified_diff
+from os import getenv
 from pathlib import Path
 import re
 from repo2docker.app import Repo2Docker
-from shutil import rmtree
+from shutil import copytree, rmtree
+
+
+# To replace reference-outputs/, set this environment variable
+REPLACE_REFERENCE_OUTPUTS = getenv("REPLACE_REFERENCE_OUTPUTS", "").lower() in (
+    "true",
+    "1",
+)
 
 
 def _recursive_filelist(d):
@@ -56,9 +64,10 @@ def test_compare(tmp_path):
         normalised_lines = list(_normalise_build_script(o.read_text().splitlines()))
         o.write_text("\n".join(normalised_lines) + "\n")
 
-    # To update reference-outputs/test/:
-    # print(tmp_path)
-    # And copy those files, updating as necessary
+    if REPLACE_REFERENCE_OUTPUTS:
+        print("Updating reference-outputs from {tmp_path}")
+        rmtree(Path(__file__).parent / "reference-outputs")
+        copytree(tmp_path, Path(__file__).parent / "reference-outputs")
 
     assert sorted(relative_files) == sorted(relative_outputs)
     for f, o in zip(sorted(files), sorted(outputs)):
