@@ -23,7 +23,7 @@ def _recursive_filelist(d):
 def _normalise_build_script(lines):
     for line in lines:
         line = re.sub(
-            r"build_script_files/\S+-2fsite-2dpackages-2f(\S+)-\w+(\s+|/)",
+            r"build_script_files/\S+-2f(repo2docker-2fbuildpacks-2f\S+)-\w+(\s+|/)",
             r"<normalised>\1 ",
             line,
         )
@@ -51,7 +51,7 @@ def test_compare(tmp_path):
     # Normalise filenames under build_script_files
     for build_script in (tmp_path / "test" / "build_script_files").iterdir():
         normalised_name = re.match(
-            r"^.+-2fsite-2dpackages-2f(.+)-\w+$", build_script.name
+            r"^.+-2f(repo2docker-2fbuildpacks-2f.+)-\w+$", build_script.name
         ).group(1)
         build_script.rename(build_script.parent / normalised_name)
 
