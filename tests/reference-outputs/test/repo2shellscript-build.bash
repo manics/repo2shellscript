@@ -307,7 +307,7 @@ fi
 # time ${MAMBA_EXE} clean --all -f -y && \
 # ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} \
 # '
-sudo -u ${NB_USER} --preserve-env=DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,CONDA_DIR,NB_PYTHON_PREFIX,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,NB_ENVIRONMENT_FILE,MAMBA_ROOT_PREFIX,MAMBA_EXE,KERNEL_PYTHON_PREFIX,PATH,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && time ${MAMBA_EXE} clean --all -f -y && ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} '"'"''
+sudo -u test --preserve-env=PATH,DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,CONDA_DIR,NB_PYTHON_PREFIX,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,NB_ENVIRONMENT_FILE,MAMBA_ROOT_PREFIX,MAMBA_EXE,KERNEL_PYTHON_PREFIX,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && time ${MAMBA_EXE} clean --all -f -y && ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} '"'"''
 
 # ensure root user after preassemble scripts
 
