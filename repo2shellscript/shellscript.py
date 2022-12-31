@@ -25,8 +25,7 @@ from repo2docker.engine import (
 
 
 def _expand_env(s, *args):
-    # repo2docker uses PATH when expanding PATH
-    env = {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+    env = {}
     for e in reversed(args):
         env.update(e)
     return Template(s).substitute(env)
@@ -78,7 +77,7 @@ fi
     return statement
 
 
-def dockerfile_to_bash(dockerfile, buildargs):
+def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     """
     Convert a Dockerfile to a bash script
 
@@ -94,16 +93,24 @@ def dockerfile_to_bash(dockerfile, buildargs):
     bash = []
     cmd = ""
     entrypoint = ""
+
     # Needed so we know which directory to run the start command from
     currentdir = ""
-    # Runtime environment
-    runtimeenv = {}
-    # Build and runtime environment
-    currentenv = {}
-    parser = DockerfileParser(dockerfile)
+
+    # The final runtime environment (expanded ENV only)
+    runtimeenv = parentenv.copy()
+
+    # Combined build and runtime environments (since during the build we need
+    # to take ARG and ENV into account)
+    currentenv = parentenv.copy()
+
+    parser = DockerfileParser(
+        dockerfile, env_replace=True, build_args=buildargs, parent_env=parentenv
+    )
     user = "root"
 
-    for d in parser.structure:
+    assert len(parser.structure) == len(parser.context_structure)
+    for (d, ctx) in zip(parser.structure, parser.context_structure):
         statement = ""
         instruction = d["instruction"]
         for line in d["content"].splitlines():
@@ -120,18 +127,12 @@ def dockerfile_to_bash(dockerfile, buildargs):
                 raise NotImplementedError(f"Base image {d['value']} not supported")
             statement += base_setup
         elif instruction == "ARG":
-            argname = d["value"].split("=", 1)[0]
-            try:
-                argvalue = shlex.quote(buildargs[d["value"]])
-            except KeyError:
-                if "=" in d["value"]:
-                    argvalue = d["value"].split("=", 1)[1]
-                else:
-                    raise
-            # Expand because this may eventually end up as a runtime env
-            argvalue = _expand_env(argvalue, currentenv)
-            currentenv[argname] = argvalue
-            statement += f"export {argname}={argvalue}\n"
+            for argname, argvalue in ctx.line_args.items():
+                # Expand because this may eventually end up as a runtime env
+                argvalue = _expand_env(argvalue, currentenv)
+                currentenv[argname] = argvalue
+                escaped_argvalue = shlex.quote(argvalue)
+                statement += f"export {argname}={escaped_argvalue}\n"
         elif instruction == "CMD":
             cmd = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "COPY":
@@ -143,20 +144,17 @@ def dockerfile_to_bash(dockerfile, buildargs):
         elif instruction == "ENTRYPOINT":
             entrypoint = " ".join(shlex.quote(p) for p in json.loads(d["value"]))
         elif instruction == "ENV":
-            # repodocker is inconsistent in how it uses ENV
-            try:
-                k, v = d["value"].split("=", 1)
-            except ValueError:
-                k, v = d["value"].split(" ", 1)
-            argvalue = _expand_env(v, currentenv)
-            currentenv[k] = argvalue
-            statement += f"export {k}={argvalue}\n"
-            runtimeenv[k] = argvalue
+            for envname, envvalue in ctx.line_envs.items():
+                envvalue = _expand_env(envvalue, currentenv)
+                currentenv[envname] = envvalue
+                runtimeenv[envname] = envvalue
+                escaped_envvalue = shlex.quote(envvalue)
+                statement += f"export {envname}={escaped_envvalue}\n"
         elif instruction == "RUN":
             run = _sudo_user(user, d["value"], currentenv)
             statement += f"{run}\n"
         elif instruction == "USER":
-            user = d["value"]
+            user = _expand_env(d["value"], currentenv)
         elif instruction == "WORKDIR":
             statement += f"cd {d['value']}\n"
             currentdir = _expand_env(d["value"], currentenv)
@@ -175,8 +173,7 @@ def dockerfile_to_bash(dockerfile, buildargs):
         "dir": currentdir,
         "env": runtimeenv,
         "start": f"{entrypoint} {cmd}",
-        # Expand ${NB_USER}
-        "user": _expand_env(user, currentenv),
+        "user": user,
     }
     return r
 
@@ -233,6 +230,10 @@ class ShellScriptEngine(ContainerEngine):
     ):
 
         buildargs = buildargs or {}
+        # repo2docker uses PATH when expanding PATH
+        parentenv = {
+            "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        }
 
         if not tag:
             tag = str(uuid4())
@@ -260,7 +261,7 @@ class ShellScriptEngine(ContainerEngine):
         else:
             dockerfile = os.path.join(builddir)
 
-        r = dockerfile_to_bash(dockerfile, buildargs)
+        r = dockerfile_to_bash(dockerfile, buildargs, parentenv)
         build_file = os.path.join(builddir, "repo2shellscript-build.bash")
         start_file = os.path.join(builddir, "repo2shellscript-start.bash")
         systemd_file = os.path.join(builddir, "repo2shellscript.service")
