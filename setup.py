@@ -4,7 +4,7 @@ setuptools.setup(
     name="repo2shellscript",
     # https://github.com/jupyter/repo2docker/pull/848 was merged!
     install_requires=[
-        "dockerfile-parse",
+        "dockerfile-parse>=2,<3",
         "jupyter-repo2docker>=2022.02.0",
         "importlib_resources;python_version<'3.7'",
     ],

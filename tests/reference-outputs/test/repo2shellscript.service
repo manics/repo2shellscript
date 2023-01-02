@@ -5,6 +5,7 @@ Description=repo2shellscript
 User=test
 Restart=always
 RestartSec=10
+Environment='PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 Environment='DEBIAN_FRONTEND=noninteractive'
 Environment='LC_ALL=en_US.UTF-8'
 Environment='LANG=en_US.UTF-8'
@@ -21,7 +22,6 @@ Environment='NB_ENVIRONMENT_FILE=/tmp/env/environment.lock'
 Environment='MAMBA_ROOT_PREFIX=/srv/conda'
 Environment='MAMBA_EXE=/srv/conda/bin/mamba'
 Environment='KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook'
-Environment='PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 Environment='REPO_DIR=/home/test'
 Environment='CONDA_DEFAULT_ENV=/srv/conda/envs/notebook'
 Environment='PYTHONUNBUFFERED=1'

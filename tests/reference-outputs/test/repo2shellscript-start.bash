@@ -4,6 +4,7 @@ if [ $(id -un) != test ]; then
     echo ERROR: Must be run as user test
     exit 1
 fi
+export PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -20,7 +21,6 @@ export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
 export MAMBA_ROOT_PREFIX=/srv/conda
 export MAMBA_EXE=/srv/conda/bin/mamba
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
-export PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export REPO_DIR=/home/test
 export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook
 export PYTHONUNBUFFERED=1
