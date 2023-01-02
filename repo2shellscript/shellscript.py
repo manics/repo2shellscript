@@ -226,6 +226,7 @@ class ShellScriptEngine(ContainerEngine):
         dockerfile="",
         fileobj=None,
         path="",
+        platform=None,
         **kwargs,
     ):
 
