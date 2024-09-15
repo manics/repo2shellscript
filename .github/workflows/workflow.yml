@@ -64,4 +64,6 @@ jobs:
       - name: Run pytest
         run: pytest -v tests
       - name: Run repo2shellscript scripts
-        run: ./run-docker-test.sh
+        run: |
+          export "PATH=$HOME/bin:$PATH"
+          ./run-docker-test.sh
