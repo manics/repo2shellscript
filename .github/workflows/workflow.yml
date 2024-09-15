@@ -45,6 +45,9 @@ jobs:
           python -mpip install -r dev-requirements.txt
       - name: Install repo2shellscript
         run: python -mpip install .
+      - name: Install https://github.com/jupyterhub/repo2docker/pull/1371
+        run: |
+          python -mpip install git+https://github.com/manics/repo2docker@tarfile-not-recursive
       - name: Download packer
         if: steps.cachepacker.outputs.cache-hit != 'true'
         run: |
