@@ -121,8 +121,12 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
         if instruction in ("EXPOSE", "COMMENT", "LABEL"):
             pass
         elif instruction == "FROM":
+            docker_library_prefix = "docker.io/library/"
+            d_value = d["value"]
+            if d_value.startswith(docker_library_prefix):
+                d_value = d_value[len(docker_library_prefix):]
             try:
-                base_setup = pkg_resources.read_text(resources, f"{d['value']}.sh")
+                base_setup = pkg_resources.read_text(resources, f"{d_value}.sh")
             except FileNotFoundError:
                 raise NotImplementedError(f"Base image {d['value']} not supported")
             statement += base_setup
