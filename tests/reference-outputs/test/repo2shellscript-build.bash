@@ -2,37 +2,38 @@
 set -eux
 _REPO2SHELLSCRIPT_SRCDIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
-# FROM buildpack-deps:bionic
-# https://github.com/docker-library/buildpack-deps/tree/f84f6184d79f2cb7ab94c365ac4f47915e7ca2a8/ubuntu/bionic
+# FROM docker.io/library/buildpack-deps:jammy
+# https://github.com/docker-library/buildpack-deps/blob/91dd87eecfa0cf2ae7e793aedbaca682dfcf693d/ubuntu/jammy/Dockerfile
 # With the addition of
 # - sudo since it makes it easier to switch USER
 
 apt-get -qq update
 
-# buildpack-deps:bionic-curl
-# buildpack-deps:bionic-scm
-# buildpack-deps:bionic
+# buildpack-deps:jammy-curl
+# buildpack-deps:jammy-scm
+# buildpack-deps:jammy
 # + sudo
 
 apt-get -qq install --yes --no-install-recommends \
     ca-certificates \
     curl \
+    gnupg \
     netbase \
     wget \
     \
-    gnupg \
-    dirmngr \
+    tzdata \
     \
-    bzr \
     git \
     mercurial \
     openssh-client \
     subversion \
+    \
     procps \
     \
     autoconf \
     automake \
     bzip2 \
+    default-libmysqlclient-dev \
     dpkg-dev \
     file \
     g++ \
@@ -73,11 +74,6 @@ apt-get -qq install --yes --no-install-recommends \
     \
     sudo
 
-if apt-cache show 'default-libmysqlclient-dev' 2>/dev/null | grep -q '^Version:'; then
-    echo 'default-libmysqlclient-dev'
-else
-    echo 'libmysqlclient-dev'
-fi
 rm -rf /var/lib/apt/lists/*
 
 # Avoid prompts from apt
@@ -98,18 +94,16 @@ apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends loca
 #     locale-gen
 echo "en_US.UTF-8 UTF-8" > /etc/locale.gen &&     locale-gen
 
-# ENV LC_ALL en_US.UTF-8
+# ENV LC_ALL=en_US.UTF-8 \
+#     LANG=en_US.UTF-8 \
+#     LANGUAGE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-
-# ENV LANG en_US.UTF-8
 export LANG=en_US.UTF-8
-
-# ENV LANGUAGE en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
 
 # Use bash as default shell, rather than sh
 
-# ENV SHELL /bin/bash
+# ENV SHELL=/bin/bash
 export SHELL=/bin/bash
 
 # Set up user
@@ -120,10 +114,9 @@ export NB_USER=test
 # ARG NB_UID
 export NB_UID=1002
 
-# ENV USER ${NB_USER}
+# ENV USER=${NB_USER} \
+#     HOME=/home/${NB_USER}
 export USER=test
-
-# ENV HOME /home/${NB_USER}
 export HOME=/home/test
 
 # RUN groupadd \
@@ -145,48 +138,52 @@ groupadd         --gid ${NB_UID}         ${NB_USER} &&     useradd         --com
 
 # RUN apt-get -qq update && \
 #     apt-get -qq install --yes --no-install-recommends \
+#        gettext-base \
 #        less \
 #        unzip \
 #        > /dev/null && \
 #     apt-get -qq purge && \
 #     apt-get -qq clean && \
 #     rm -rf /var/lib/apt/lists/*
-apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends        less        unzip        > /dev/null &&     apt-get -qq purge &&     apt-get -qq clean &&     rm -rf /var/lib/apt/lists/*
+apt-get -qq update &&     apt-get -qq install --yes --no-install-recommends        gettext-base        less        unzip        > /dev/null &&     apt-get -qq purge &&     apt-get -qq clean &&     rm -rf /var/lib/apt/lists/*
 
 # EXPOSE 8888
 
 # Environment variables required for build
 
-# ENV APP_BASE /srv
+# ENV APP_BASE=/srv
 export APP_BASE=/srv
 
-# ENV CONDA_DIR ${APP_BASE}/conda
+# ENV CONDA_DIR=${APP_BASE}/conda
 export CONDA_DIR=/srv/conda
 
-# ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
+# ENV NB_PYTHON_PREFIX=${CONDA_DIR}/envs/notebook
 export NB_PYTHON_PREFIX=/srv/conda/envs/notebook
 
-# ENV NPM_DIR ${APP_BASE}/npm
+# ENV NPM_DIR=${APP_BASE}/npm
 export NPM_DIR=/srv/npm
 
-# ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
+# ENV NPM_CONFIG_GLOBALCONFIG=${NPM_DIR}/npmrc
 export NPM_CONFIG_GLOBALCONFIG=/srv/npm/npmrc
 
-# ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
+# ENV NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
 export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
 
-# ENV MAMBA_ROOT_PREFIX ${CONDA_DIR}
+# ENV MAMBA_ROOT_PREFIX=${CONDA_DIR}
 export MAMBA_ROOT_PREFIX=/srv/conda
 
-# ENV MAMBA_EXE ${CONDA_DIR}/bin/mamba
+# ENV MAMBA_EXE=${CONDA_DIR}/bin/mamba
 export MAMBA_EXE=/srv/conda/bin/mamba
 
-# ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
+# ENV CONDA_PLATFORM=linux-64
+export CONDA_PLATFORM=linux-64
+
+# ENV KERNEL_PYTHON_PREFIX=${NB_PYTHON_PREFIX}
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
 
 # Special case PATH
 
-# ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
+# ENV PATH=${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
 export PATH=/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # If scripts required during build are present, copy them
@@ -203,15 +200,15 @@ else
     chown 1002:1002 "/etc/profile.d/activate-conda.sh"
 fi
 
-# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+# COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2epy-2d3-2e10-2dlinux-2d64-2elock /tmp/env/environment.lock
 mkdir -p "`dirname /tmp/env/environment.lock`"
-if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock ]; then
-    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock *; do
+if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2epy-2d3-2e10-2dlinux-2d64-2elock ]; then
+    for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2epy-2d3-2e10-2dlinux-2d64-2elock *; do
         cp -a "$i" /tmp/env/environment.lock;
         chown -R 1002:1002 /tmp/env/environment.lock/"`basename "$i"`"
     done
 else
-    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/<normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2epy-2d3-2e10-2dlinux-2d64-2elock /tmp/env/environment.lock
     chown 1002:1002 "/tmp/env/environment.lock"
 fi
 
@@ -245,8 +242,15 @@ mkdir -p ${NPM_DIR} && chown -R ${NB_USER}:${NB_USER} ${NPM_DIR}
 # ARG REPO_DIR=${HOME}
 export REPO_DIR=/home/test
 
-# ENV REPO_DIR ${REPO_DIR}
+# ENV REPO_DIR=${REPO_DIR}
 export REPO_DIR=/home/test
+
+# Create a folder and grant the user permissions if it doesn't exist
+
+# RUN if [ ! -d "${REPO_DIR}" ]; then \
+#         /usr/bin/install -o ${NB_USER} -g ${NB_USER} -d "${REPO_DIR}"; \
+#     fi
+if [ ! -d "${REPO_DIR}" ]; then         /usr/bin/install -o ${NB_USER} -g ${NB_USER} -d "${REPO_DIR}";     fi
 
 # WORKDIR ${REPO_DIR}
 cd ${REPO_DIR}
@@ -270,12 +274,12 @@ chown ${NB_USER}:${NB_USER} ${REPO_DIR}
 
 # installs. See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-# ENV PATH ${HOME}/.local/bin:${REPO_DIR}/.local/bin:${PATH}
+# ENV PATH=${HOME}/.local/bin:${REPO_DIR}/.local/bin:${PATH}
 export PATH=/home/test/.local/bin:/home/test/.local/bin:/srv/conda/envs/notebook/bin:/srv/conda/bin:/srv/npm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # The rest of the environment
 
-# ENV CONDA_DEFAULT_ENV ${KERNEL_PYTHON_PREFIX}
+# ENV CONDA_DEFAULT_ENV=${KERNEL_PYTHON_PREFIX}
 export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook
 
 # Run pre-assemble scripts! These are instructions that depend on the content
@@ -307,7 +311,7 @@ fi
 # time ${MAMBA_EXE} clean --all -f -y && \
 # ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} \
 # '
-sudo -u test --preserve-env=PATH,DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,CONDA_DIR,NB_PYTHON_PREFIX,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,NB_ENVIRONMENT_FILE,MAMBA_ROOT_PREFIX,MAMBA_EXE,KERNEL_PYTHON_PREFIX,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && time ${MAMBA_EXE} clean --all -f -y && ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} '"'"''
+sudo -u test --preserve-env=PATH,DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_USER,NB_UID,USER,HOME,APP_BASE,CONDA_DIR,NB_PYTHON_PREFIX,NPM_DIR,NPM_CONFIG_GLOBALCONFIG,NB_ENVIRONMENT_FILE,MAMBA_ROOT_PREFIX,MAMBA_EXE,CONDA_PLATFORM,KERNEL_PYTHON_PREFIX,REPO_DIR,CONDA_DEFAULT_ENV bash -c 'TIMEFORMAT='"'"'time: %3R'"'"' bash -c '"'"'time ${MAMBA_EXE} env update -p ${NB_PYTHON_PREFIX} --file "environment.yml" && time ${MAMBA_EXE} clean --all -f -y && ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} '"'"''
 
 # ensure root user after preassemble scripts
 
@@ -315,16 +319,16 @@ sudo -u test --preserve-env=PATH,DEBIAN_FRONTEND,LC_ALL,LANG,LANGUAGE,SHELL,NB_U
 
 # Copy stuff.
 
-# COPY --chown=1002:1002 src/ ${REPO_DIR}
-mkdir -p "`dirname ${REPO_DIR}`"
+# COPY --chown=1002:1002 src/ ${REPO_DIR}/
+mkdir -p "`dirname ${REPO_DIR}/`"
 if [ -d "${_REPO2SHELLSCRIPT_SRCDIR}"/src ]; then
     for i in "${_REPO2SHELLSCRIPT_SRCDIR}"/src/*; do
-        cp -a "$i" ${REPO_DIR};
-        chown -R 1002:1002 ${REPO_DIR}/"`basename "$i"`"
+        cp -a "$i" ${REPO_DIR}/;
+        chown -R 1002:1002 ${REPO_DIR}//"`basename "$i"`"
     done
 else
-    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src ${REPO_DIR}
-    chown 1002:1002 "${REPO_DIR}"
+    cp "${_REPO2SHELLSCRIPT_SRCDIR}"/src ${REPO_DIR}/
+    chown 1002:1002 "${REPO_DIR}/"
 fi
 
 # Run assemble scripts! These will actually turn the specification
