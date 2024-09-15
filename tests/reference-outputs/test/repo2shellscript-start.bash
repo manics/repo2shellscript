@@ -20,6 +20,7 @@ export NPM_CONFIG_GLOBALCONFIG=/srv/npm/npmrc
 export NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
 export MAMBA_ROOT_PREFIX=/srv/conda
 export MAMBA_EXE=/srv/conda/bin/mamba
+export CONDA_PLATFORM=linux-64
 export KERNEL_PYTHON_PREFIX=/srv/conda/envs/notebook
 export REPO_DIR=/home/test
 export CONDA_DEFAULT_ENV=/srv/conda/envs/notebook

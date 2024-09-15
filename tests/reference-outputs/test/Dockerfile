@@ -1,5 +1,5 @@
 
-FROM buildpack-deps:bionic
+FROM docker.io/library/buildpack-deps:jammy
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,18 +14,18 @@ RUN apt-get -qq update && \
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
 
-ENV LC_ALL en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
 
 # Use bash as default shell, rather than sh
-ENV SHELL /bin/bash
+ENV SHELL=/bin/bash
 
 # Set up user
 ARG NB_USER
 ARG NB_UID
-ENV USER ${NB_USER}
-ENV HOME /home/${NB_USER}
+ENV USER=${NB_USER} \
+    HOME=/home/${NB_USER}
 
 RUN groupadd \
         --gid ${NB_UID} \
@@ -43,6 +43,7 @@ RUN groupadd \
 # If install fails for some reason, errors will still be printed
 RUN apt-get -qq update && \
     apt-get -qq install --yes --no-install-recommends \
+       gettext-base \
        less \
        unzip \
        > /dev/null && \
@@ -53,22 +54,23 @@ RUN apt-get -qq update && \
 EXPOSE 8888
 
 # Environment variables required for build
-ENV APP_BASE /srv
-ENV CONDA_DIR ${APP_BASE}/conda
-ENV NB_PYTHON_PREFIX ${CONDA_DIR}/envs/notebook
-ENV NPM_DIR ${APP_BASE}/npm
-ENV NPM_CONFIG_GLOBALCONFIG ${NPM_DIR}/npmrc
-ENV NB_ENVIRONMENT_FILE /tmp/env/environment.lock
-ENV MAMBA_ROOT_PREFIX ${CONDA_DIR}
-ENV MAMBA_EXE ${CONDA_DIR}/bin/mamba
-ENV KERNEL_PYTHON_PREFIX ${NB_PYTHON_PREFIX}
+ENV APP_BASE=/srv
+ENV CONDA_DIR=${APP_BASE}/conda
+ENV NB_PYTHON_PREFIX=${CONDA_DIR}/envs/notebook
+ENV NPM_DIR=${APP_BASE}/npm
+ENV NPM_CONFIG_GLOBALCONFIG=${NPM_DIR}/npmrc
+ENV NB_ENVIRONMENT_FILE=/tmp/env/environment.lock
+ENV MAMBA_ROOT_PREFIX=${CONDA_DIR}
+ENV MAMBA_EXE=${CONDA_DIR}/bin/mamba
+ENV CONDA_PLATFORM=linux-64
+ENV KERNEL_PYTHON_PREFIX=${NB_PYTHON_PREFIX}
 # Special case PATH
-ENV PATH ${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
+ENV PATH=${NB_PYTHON_PREFIX}/bin:${CONDA_DIR}/bin:${NPM_DIR}/bin:${PATH}
 # If scripts required during build are present, copy them
 
 COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2factivate-2dconda-2esh /etc/profile.d/activate-conda.sh
 
-COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2elock /tmp/env/environment.lock
+COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2fenvironment-2epy-2d3-2e10-2dlinux-2d64-2elock /tmp/env/environment.lock
 
 COPY --chown=1002:1002 <normalised>repo2docker-2fbuildpacks-2fconda-2finstall-2dbase-2denv-2ebash /tmp/install-base-env.bash
 RUN TIMEFORMAT='time: %3R' \
@@ -84,7 +86,12 @@ USER root
 
 # Allow target path repo is cloned to be configurable
 ARG REPO_DIR=${HOME}
-ENV REPO_DIR ${REPO_DIR}
+ENV REPO_DIR=${REPO_DIR}
+# Create a folder and grant the user permissions if it doesn't exist
+RUN if [ ! -d "${REPO_DIR}" ]; then \
+        /usr/bin/install -o ${NB_USER} -g ${NB_USER} -d "${REPO_DIR}"; \
+    fi
+
 WORKDIR ${REPO_DIR}
 RUN chown ${NB_USER}:${NB_USER} ${REPO_DIR}
 
@@ -96,10 +103,10 @@ RUN chown ${NB_USER}:${NB_USER} ${REPO_DIR}
 #
 # The XDG standard suggests ~/.local/bin as the path for local user-specific
 # installs. See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-ENV PATH ${HOME}/.local/bin:${REPO_DIR}/.local/bin:${PATH}
+ENV PATH=${HOME}/.local/bin:${REPO_DIR}/.local/bin:${PATH}
 
 # The rest of the environment
-ENV CONDA_DEFAULT_ENV ${KERNEL_PYTHON_PREFIX}
+ENV CONDA_DEFAULT_ENV=${KERNEL_PYTHON_PREFIX}
 # Run pre-assemble scripts! These are instructions that depend on the content
 # of the repository but don't access any files in the repository. By executing
 # them before copying the repository itself we can cache these steps. For
@@ -119,7 +126,7 @@ ${MAMBA_EXE} list -p ${NB_PYTHON_PREFIX} \
 USER root
 
 # Copy stuff.
-COPY --chown=1002:1002 src/ ${REPO_DIR}
+COPY --chown=1002:1002 src/ ${REPO_DIR}/
 
 # Run assemble scripts! These will actually turn the specification
 # in the repository into an image.

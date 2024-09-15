@@ -1,5 +1,5 @@
 source "docker" "repo" {
-  image = "ubuntu:18.04"
+  image = "${os_name}:${os_version}"
   commit = true
   changes = [
     "ENTRYPOINT /usr/local/bin/repo2shellscript-start.bash",
