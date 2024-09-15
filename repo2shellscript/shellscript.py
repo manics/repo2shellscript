@@ -110,7 +110,7 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     user = "root"
 
     assert len(parser.structure) == len(parser.context_structure)
-    for (d, ctx) in zip(parser.structure, parser.context_structure):
+    for d, ctx in zip(parser.structure, parser.context_structure):
         statement = ""
         instruction = d["instruction"]
         for line in d["content"].splitlines():
@@ -124,7 +124,7 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
             docker_library_prefix = "docker.io/library/"
             d_value = d["value"]
             if d_value.startswith(docker_library_prefix):
-                d_value = d_value[len(docker_library_prefix):]
+                d_value = d_value[len(docker_library_prefix) :]
             try:
                 base_setup = pkg_resources.read_text(resources, f"{d_value}.sh")
             except FileNotFoundError:
