@@ -124,7 +124,7 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     user = "root"
 
     assert len(parser.structure) == len(parser.context_structure)
-    for (d, ctx) in zip(parser.structure, parser.context_structure):
+    for d, ctx in zip(parser.structure, parser.context_structure):
         statement = ""
         instruction = d["instruction"]
         for line in d["content"].splitlines():
@@ -265,7 +265,14 @@ class ShellScriptEngine(ContainerEngine):
             jupyter_token = str(uuid4())
 
         if kwargs:
-            raise NotImplementedError("Additional kwargs not supported")
+            # Some kwargs may be passed
+            # https://github.com/jupyterhub/repo2docker/pull/1421
+            ignored_kwargs = {"push", "load"}
+            unexpected_kwargs = set(kwargs.keys()).difference(ignored_kwargs)
+            if unexpected_kwargs:
+                raise NotImplementedError(
+                    f"Additional kwargs not supported: {sorted(unexpected_kwargs)}"
+                )
         # TODO: custom_context?
 
         builddir = os.path.join(self.output_directory, tag)
@@ -365,8 +372,11 @@ fi
         return [Image(tags=[tag]) for tag in images]
 
     def inspect_image(self, image):
-        assert os.path.exists(os.path.join(self.output_directory, image))
-        return Image(tags=[image])
+        if os.path.exists(os.path.join(self.output_directory, image)):
+            return Image(tags=[image])
+        # https://github.com/jupyterhub/repo2docker/pull/1421
+        # Return None if image doesn't exist
+        return None
 
     def push(self, image_spec):
         raise NotImplementedError("push() is not supported")
