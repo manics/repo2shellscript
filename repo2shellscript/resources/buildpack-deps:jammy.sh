@@ -1,6 +1,9 @@
 # https://github.com/docker-library/buildpack-deps/blob/91dd87eecfa0cf2ae7e793aedbaca682dfcf693d/ubuntu/jammy/Dockerfile
 # With the addition of
 # - sudo since it makes it easier to switch USER
+# - DEBIAN_FRONTEND=noninteractive https://github.com/docker-library/buildpack-deps/blob/91dd87eecfa0cf2ae7e793aedbaca682dfcf693d/ubuntu/jammy/curl/Dockerfile#L17C3-L18
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 apt-get -qq update
 
