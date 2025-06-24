@@ -6,6 +6,7 @@ IMAGE_NAME=test-repo2shellscript
 repo2docker --engine shellscript --user-id 1000 --user-name test --no-run --image-name $IMAGE_NAME https://github.com/binder-examples/conda
 
 # Test by building a Docker image with packer
+packer version
 cd ./repo2shellscript-output/$IMAGE_NAME
 packer build repo2docker.pkr.hcl
 

@@ -1,6 +1,6 @@
 source "vagrant" "virtualbox" {
   communicator = "ssh"
-  source_path = "ubuntu/bionic64"
+  source_path = "${os_name}/${os_version}64"
   # box_version = "v20200821.1.0"
   provider = "virtualbox"
   # add_force = true

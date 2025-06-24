@@ -77,6 +77,20 @@ fi
     return statement
 
 
+def _get_os(base_image):
+    docker_library_prefix = "docker.io/library/"
+    value = base_image
+    if value.startswith(docker_library_prefix):
+        value = value[len(docker_library_prefix) :]
+
+    os_image, _, os_version = value.partition(":")
+    os_name = os_image
+    if os_image == "buildpack-deps":
+        os_name = "ubuntu"
+
+    return os_name, os_image, os_version
+
+
 def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     """
     Convert a Dockerfile to a bash script
@@ -110,7 +124,7 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     user = "root"
 
     assert len(parser.structure) == len(parser.context_structure)
-    for (d, ctx) in zip(parser.structure, parser.context_structure):
+    for d, ctx in zip(parser.structure, parser.context_structure):
         statement = ""
         instruction = d["instruction"]
         for line in d["content"].splitlines():
@@ -121,8 +135,11 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
         if instruction in ("EXPOSE", "COMMENT", "LABEL"):
             pass
         elif instruction == "FROM":
+            os_name, os_image, os_version = _get_os(d["value"])
             try:
-                base_setup = pkg_resources.read_text(resources, f"{d['value']}.sh")
+                base_setup = pkg_resources.read_text(
+                    resources, f"{os_image}:{os_version}.sh"
+                )
             except FileNotFoundError:
                 raise NotImplementedError(f"Base image {d['value']} not supported")
             statement += base_setup
@@ -172,6 +189,8 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
         "bash": bash,
         "dir": currentdir,
         "env": runtimeenv,
+        "os_name": os_name,
+        "os_version": os_version,
         "start": f"{entrypoint} {cmd}",
         "user": user,
     }
@@ -218,6 +237,8 @@ class ShellScriptEngine(ContainerEngine):
     def build(
         self,
         *,
+        push=False,
+        load=False,
         buildargs=None,
         cache_from=None,
         container_limits=None,
@@ -244,6 +265,9 @@ class ShellScriptEngine(ContainerEngine):
             jupyter_token = self.jupyter_token
         else:
             jupyter_token = str(uuid4())
+
+        # Ignore push and load args
+        # https://github.com/jupyterhub/repo2docker/pull/1421
 
         if kwargs:
             raise NotImplementedError("Additional kwargs not supported")
@@ -317,6 +341,8 @@ fi
         work_dir = r["dir"] or "~"
 
         template_args = {
+            "os_name": r["os_name"],
+            "os_version": r["os_version"],
             "user": r["user"],
             "start": r["start"],
             "systemd_environment": systemd_environment,
@@ -344,8 +370,11 @@ fi
         return [Image(tags=[tag]) for tag in images]
 
     def inspect_image(self, image):
-        assert os.path.exists(os.path.join(self.output_directory, image))
-        return Image(tags=[image])
+        if os.path.exists(os.path.join(self.output_directory, image)):
+            return Image(tags=[image])
+        # https://github.com/jupyterhub/repo2docker/pull/1421
+        # Return None if image doesn't exist
+        return None
 
     def push(self, image_spec):
         raise NotImplementedError("push() is not supported")
