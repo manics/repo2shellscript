@@ -237,6 +237,8 @@ class ShellScriptEngine(ContainerEngine):
     def build(
         self,
         *,
+        push=False,
+        load=False,
         buildargs=None,
         cache_from=None,
         container_limits=None,
@@ -263,6 +265,9 @@ class ShellScriptEngine(ContainerEngine):
             jupyter_token = self.jupyter_token
         else:
             jupyter_token = str(uuid4())
+
+        # Ignore push and load args
+        # https://github.com/jupyterhub/repo2docker/pull/1421
 
         if kwargs:
             raise NotImplementedError("Additional kwargs not supported")
@@ -365,8 +370,11 @@ fi
         return [Image(tags=[tag]) for tag in images]
 
     def inspect_image(self, image):
-        assert os.path.exists(os.path.join(self.output_directory, image))
-        return Image(tags=[image])
+        if os.path.exists(os.path.join(self.output_directory, image)):
+            return Image(tags=[image])
+        # https://github.com/jupyterhub/repo2docker/pull/1421
+        # Return None if image doesn't exist
+        return None
 
     def push(self, image_spec):
         raise NotImplementedError("push() is not supported")
