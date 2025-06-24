@@ -124,7 +124,7 @@ def dockerfile_to_bash(dockerfile, buildargs, parentenv):
     user = "root"
 
     assert len(parser.structure) == len(parser.context_structure)
-    for (d, ctx) in zip(parser.structure, parser.context_structure):
+    for d, ctx in zip(parser.structure, parser.context_structure):
         statement = ""
         instruction = d["instruction"]
         for line in d["content"].splitlines():
